@@ -139,6 +139,62 @@ export async function payInstallment(installmentId: string, amount: number, paym
 }
 
 /**
+ * แก้ไขข้อมูลการชำระงวด (สำหรับ edit ที่จ่ายไปแล้ว)
+ */
+export async function updateInstallment(
+  installmentId: string, 
+  amount: number, 
+  paymentDate: Date, 
+  slipImageUrl?: string
+) {
+  const installment = await prisma.installment.findUnique({
+    where: { id: installmentId },
+    include: { plan: true },
+  });
+
+  if (!installment) {
+    throw new Error("ไม่พบข้อมูลงวดผ่อน");
+  }
+
+  // สำหรับ edit: replace ค่าเดิมแทนที่จะบวกเพิ่ม
+  const status =
+    amount >= installment.amount
+      ? "PAID"
+      : amount > 0
+      ? "PARTIAL"
+      : "PENDING";
+
+  await prisma.installment.update({
+    where: { id: installmentId },
+    data: {
+      paidAmount: amount, // Replace ไม่ใช่บวกเพิ่ม
+      paidDate: paymentDate,
+      slipImageUrl: slipImageUrl !== undefined ? slipImageUrl : installment.slipImageUrl,
+      status,
+    },
+  });
+
+  // ตรวจสอบว่าจ่ายครบทุกงวดหรือยัง
+  const allInstallments = await prisma.installment.findMany({
+    where: { installmentPlanId: installment.installmentPlanId },
+  });
+
+  const allPaid = allInstallments.every((inst) => 
+    inst.id === installmentId ? status === "PAID" : inst.status === "PAID"
+  );
+  
+  await prisma.installmentPlan.update({
+    where: { id: installment.installmentPlanId },
+    data: { status: allPaid ? "COMPLETED" : "ACTIVE" },
+  });
+
+  return prisma.installment.findUnique({
+    where: { id: installmentId },
+    include: { plan: true },
+  });
+}
+
+/**
  * ดึงสรุป Installment Plan
  */
 export async function getInstallmentSummary(planId: string) {

@@ -50,7 +50,7 @@ export async function GET(
   }
 }
 
-// POST - ชำระงวด
+// POST - ชำระงวด หรือแก้ไขการชำระ
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ workspaceId: string; planId: string }> }
@@ -73,12 +73,25 @@ export async function POST(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const installment = await InstallmentService.payInstallment(
-      body.installmentId,
-      body.amount,
-      new Date(body.paidDate),
-      body.slipImageUrl
-    );
+    let installment;
+    
+    if (body.isEdit) {
+      // แก้ไขการชำระที่มีอยู่แล้ว (replace ค่าเดิม)
+      installment = await InstallmentService.updateInstallment(
+        body.installmentId,
+        body.amount,
+        new Date(body.paidDate),
+        body.slipImageUrl
+      );
+    } else {
+      // ชำระใหม่ (บวกเพิ่ม)
+      installment = await InstallmentService.payInstallment(
+        body.installmentId,
+        body.amount,
+        new Date(body.paidDate),
+        body.slipImageUrl
+      );
+    }
 
     return NextResponse.json(installment);
   } catch (error: any) {

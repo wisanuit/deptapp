@@ -131,6 +131,8 @@ export default function InstallmentDetailPage() {
 
   const handlePayment = async (installmentId: string, amount: number) => {
     try {
+      const isEdit = editingId !== null; // ถ้ามี editingId แสดงว่ากำลังแก้ไข
+      
       const res = await fetch(`/api/workspaces/${workspaceId}/installments/${planId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -139,6 +141,7 @@ export default function InstallmentDetailPage() {
           amount,
           paidDate: new Date(payDate).toISOString(),
           slipImageUrl: slipImageUrl || undefined,
+          isEdit, // ส่งค่าบอกว่าเป็นการแก้ไขหรือไม่
         }),
       });
 
@@ -149,7 +152,7 @@ export default function InstallmentDetailPage() {
         setPayDate(new Date().toISOString().split("T")[0]);
         setSlipImageUrl("");
         fetchPlan();
-        toast.success("ชำระงวดสำเร็จ");
+        toast.success(isEdit ? "แก้ไขการชำระสำเร็จ" : "ชำระงวดสำเร็จ");
       } else {
         const error = await res.json();
         toast.error(error.error || "เกิดข้อผิดพลาด");
