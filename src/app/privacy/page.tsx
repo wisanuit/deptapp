@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-slate-800 mb-4">1. บทนำ</h2>
               <p className="text-slate-600 leading-relaxed">
-                Debt Manager ("เรา", "ของเรา") ให้ความสำคัญกับความเป็นส่วนตัวของท่าน นโยบายความเป็นส่วนตัวนี้อธิบายวิธีที่เราเก็บรวบรวม ใช้ เปิดเผย และปกป้องข้อมูลของท่านเมื่อท่านใช้บริการของเรา
+                Debt Manager (&ldquo;เรา&rdquo;, &ldquo;ของเรา&rdquo;) ให้ความสำคัญกับความเป็นส่วนตัวของท่าน นโยบายความเป็นส่วนตัวนี้อธิบายวิธีที่เราเก็บรวบรวม ใช้ เปิดเผย และปกป้องข้อมูลของท่านเมื่อท่านใช้บริการของเรา
               </p>
             </section>
 
