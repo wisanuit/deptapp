@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,11 +62,7 @@ export default function AdminSubscriptionsPage() {
   const [rejectReason, setRejectReason] = useState<string>("");
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSubscriptions();
-  }, [activeTab]);
-
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/subscriptions?status=${activeTab}`);
@@ -82,7 +79,11 @@ export default function AdminSubscriptionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, router]);
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
 
   const handleApprove = async (subscriptionId: string) => {
     if (!confirm("ยืนยันการอนุมัติคำขอนี้?")) return;
@@ -222,7 +223,7 @@ export default function AdminSubscriptionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-slate-700 flex items-center justify-center">
                         {sub.user.image ? (
-                          <img src={sub.user.image} alt="" className="h-12 w-12 rounded-full" />
+                          <Image src={sub.user.image} alt="" width={48} height={48} className="rounded-full" unoptimized />
                         ) : (
                           <User className="h-6 w-6 text-slate-400" />
                         )}

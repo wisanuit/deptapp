@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { 
-  Upload, X, FileText, Image, Loader2, 
+  Upload, X, FileText, Image as ImageIcon, Loader2, 
   CreditCard, Home, FileCheck, Receipt, MoreHorizontal 
 } from "lucide-react";
 
@@ -119,10 +120,13 @@ export function DocumentUpload({
               className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border"
             >
               {isImage(doc.url) ? (
-                <img 
+                <Image 
                   src={doc.url} 
-                  alt={doc.name} 
+                  alt={doc.name}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 object-cover rounded-lg"
+                  unoptimized
                 />
               ) : (
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">

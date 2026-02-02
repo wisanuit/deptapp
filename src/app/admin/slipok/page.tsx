@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,11 +44,7 @@ export default function AdminSlipOKPage() {
   const [bankName, setBankName] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/slipok");
       if (res.status === 403) {
@@ -70,7 +66,11 @@ export default function AdminSlipOKPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const handleSave = async () => {
     if (!branchId || !promptPayId || !promptPayName) {

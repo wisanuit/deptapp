@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,10 +41,11 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
     lg: "w-12 h-12 text-base",
     xl: "w-16 h-16 text-lg"
   };
+  const sizePx = { sm: 32, md: 40, lg: 48, xl: 64 };
   
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={sizePx[size]} height={sizePx[size]} className="rounded-full object-cover" unoptimized />
     );
   }
   
@@ -113,7 +115,7 @@ export default function CollectionCaseDetailPage() {
   });
   const [processing, setProcessing] = useState(false);
 
-  const fetchCase = async () => {
+  const fetchCase = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/collections/${caseId}`);
       const data = await res.json();
@@ -123,11 +125,11 @@ export default function CollectionCaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, caseId]);
 
   useEffect(() => {
     fetchCase();
-  }, [workspaceId, caseId]);
+  }, [fetchCase]);
 
   const handleAddActivity = async () => {
     setProcessing(true);

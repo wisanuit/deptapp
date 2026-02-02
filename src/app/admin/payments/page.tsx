@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,11 +65,7 @@ export default function AdminPaymentsPage() {
   const [rejectReason, setRejectReason] = useState<string>("");
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPayments();
-  }, [filter]);
-
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/payments?status=${filter}`);
@@ -89,7 +85,11 @@ export default function AdminPaymentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
 
   const handleApprove = async (paymentId: string) => {
     if (!confirm("ยืนยันอนุมัติการชำระเงินนี้?")) return;
@@ -305,10 +305,12 @@ export default function AdminPaymentsPage() {
                           className="relative w-32 h-40 rounded-lg overflow-hidden bg-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => setSelectedImage(payment.slipImage)}
                         >
-                          <img
+                          <Image
                             src={payment.slipImage}
                             alt="Slip"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
                             <Eye className="h-6 w-6 text-white" />
@@ -339,7 +341,7 @@ export default function AdminPaymentsPage() {
                       {/* User Info */}
                       <div className="flex items-center gap-2">
                         {payment.user.image ? (
-                          <img src={payment.user.image} alt="" className="w-6 h-6 rounded-full" />
+                          <Image src={payment.user.image} alt="" width={24} height={24} className="rounded-full" unoptimized />
                         ) : (
                           <User className="w-6 h-6 text-slate-400" />
                         )}
@@ -444,11 +446,14 @@ export default function AdminPaymentsPage() {
           >
             <X className="h-6 w-6" />
           </Button>
-          <img
+          <Image
             src={selectedImage}
             alt="Slip"
+            width={800}
+            height={1000}
             className="max-w-full max-h-[90vh] object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
+            unoptimized
           />
         </div>
       )}

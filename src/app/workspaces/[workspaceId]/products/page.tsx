@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +98,7 @@ export default function ProductsPage() {
     cost: "",
   });
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const searchParams = new URLSearchParams();
       if (search) searchParams.set("search", search);
@@ -114,11 +115,11 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, search, selectedCategory]);
 
   useEffect(() => {
     fetchProducts();
-  }, [workspaceId, search, selectedCategory]);
+  }, [fetchProducts]);
 
   const handleAddProduct = async () => {
     if (!productForm.name) {
@@ -467,10 +468,12 @@ export default function ProductsPage() {
                   {/* Product Image */}
                   <div className="aspect-square bg-muted/50 flex items-center justify-center relative">
                     {product.imageUrl ? (
-                      <img
+                      <Image
                         src={product.imageUrl}
                         alt={product.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     ) : (
                       <Package className="h-16 w-16 text-muted-foreground opacity-30" />
@@ -924,12 +927,15 @@ export default function ProductsPage() {
 
             {/* Product Info */}
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-4">
-              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden relative">
                 {selectedProduct.imageUrl ? (
-                  <img
+                  <Image
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
+                    width={48}
+                    height={48}
                     className="w-full h-full object-cover rounded-lg"
+                    unoptimized
                   />
                 ) : (
                   <Package className="h-6 w-6 text-muted-foreground" />

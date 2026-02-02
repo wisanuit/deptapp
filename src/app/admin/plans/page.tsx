@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,11 +72,7 @@ export default function AdminPlansPage() {
     limits: {} as Record<string, number>,
   });
 
-  useEffect(() => {
-    fetchPlans();
-  }, []);
-
-  const fetchPlans = async () => {
+  const fetchPlans = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/plans");
       if (res.status === 403) {
@@ -91,7 +87,11 @@ export default function AdminPlansPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
   const startEdit = (plan: Plan) => {
     setEditingPlan(plan);

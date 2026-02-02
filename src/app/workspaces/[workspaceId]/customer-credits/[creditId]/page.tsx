@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export default function CustomerCreditDetailPage() {
   const [showUseCredit, setShowUseCredit] = useState(false);
   const [useData, setUseData] = useState({ amount: "", reference: "" });
 
-  const fetchCredit = async () => {
+  const fetchCredit = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/customer-credits/${creditId}`);
       const data = await res.json();
@@ -62,11 +62,11 @@ export default function CustomerCreditDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, creditId]);
 
   useEffect(() => {
     fetchCredit();
-  }, [workspaceId, creditId]);
+  }, [fetchCredit]);
 
   const handleUpdateLimit = async () => {
     setProcessing(true);

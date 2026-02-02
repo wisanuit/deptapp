@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -39,7 +40,7 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
   
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={64} height={64} className={`${sizeClasses[size]} rounded-full object-cover`} unoptimized />
     );
   }
   
@@ -111,7 +112,7 @@ export default function InstallmentDetailPage() {
   const [slipImageUrl, setSlipImageUrl] = useState("");
   const [viewingSlip, setViewingSlip] = useState<string | null>(null);
 
-  const fetchPlan = async () => {
+  const fetchPlan = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/installments/${planId}`);
       const data = await res.json();
@@ -122,11 +123,11 @@ export default function InstallmentDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, planId]);
 
   useEffect(() => {
     fetchPlan();
-  }, [workspaceId, planId]);
+  }, [fetchPlan]);
 
   const handlePayment = async (installmentId: string, amount: number) => {
     try {
@@ -234,10 +235,13 @@ export default function InstallmentDetailPage() {
               </Link>
               <div className="flex items-center gap-2">
                 {plan.itemImageUrl ? (
-                  <img 
+                  <Image 
                     src={plan.itemImageUrl} 
                     alt={plan.itemName}
+                    width={36}
+                    height={36}
                     className="w-9 h-9 rounded-lg object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-500">
@@ -276,10 +280,13 @@ export default function InstallmentDetailPage() {
                 <div className="flex flex-col sm:flex-row gap-6 mb-6">
                   {plan.itemImageUrl ? (
                     <div className="flex-shrink-0 mx-auto sm:mx-0">
-                      <img 
+                      <Image 
                         src={plan.itemImageUrl} 
                         alt={plan.itemName}
+                        width={192}
+                        height={192}
                         className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl object-cover shadow-lg border-4 border-white dark:border-gray-800"
+                        unoptimized
                       />
                     </div>
                   ) : (
@@ -663,11 +670,14 @@ export default function InstallmentDetailPage() {
             >
               <X className="h-6 w-6" />
             </Button>
-            <img 
+            <Image 
               src={viewingSlip} 
               alt="สลิปการชำระ"
+              width={600}
+              height={800}
               className="max-w-full max-h-[85vh] rounded-lg object-contain"
               onClick={(e) => e.stopPropagation()}
+              unoptimized
             />
           </div>
         </div>

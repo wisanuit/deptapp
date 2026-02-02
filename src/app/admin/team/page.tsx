@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,7 @@ export default function AdminTeamPage() {
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAdmins();
-  }, []);
-
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
       const res = await fetch("/api/admin");
       if (res.status === 403) {
@@ -57,7 +54,11 @@ export default function AdminTeamPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchAdmins();
+  }, [fetchAdmins]);
 
   const handleAddAdmin = async () => {
     if (!newEmail.trim()) {
@@ -163,7 +164,7 @@ export default function AdminTeamPage() {
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
                         {admin.image ? (
-                          <img src={admin.image} alt="" className="h-12 w-12 rounded-full" />
+                          <Image src={admin.image} alt="" width={48} height={48} className="rounded-full" unoptimized />
                         ) : (
                           <User className="h-6 w-6 text-slate-400" />
                         )}

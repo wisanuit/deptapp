@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,10 +76,13 @@ function Avatar({
 
   if (imageUrl) {
     return (
-      <img
+      <Image
         src={imageUrl}
         alt={name}
+        width={48}
+        height={48}
         className={`${sizeClasses[size]} rounded-full object-cover`}
+        unoptimized
       />
     );
   }

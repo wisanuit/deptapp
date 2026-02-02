@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,10 +24,11 @@ function Avatar({ name, size = "xl", imageUrl }: { name: string; size?: "sm" | "
     lg: "w-12 h-12 text-base",
     xl: "w-20 h-20 text-2xl"
   };
+  const sizePx = { sm: 32, md: 40, lg: 48, xl: 80 };
   
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover ring-4 ring-background shadow-lg`} />
+      <Image src={imageUrl} alt={name} width={sizePx[size]} height={sizePx[size]} className="rounded-full object-cover ring-4 ring-background shadow-lg" unoptimized />
     );
   }
   

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
 
@@ -75,10 +76,13 @@ export function ImageUpload({
     <div className="space-y-2">
       {value ? (
         <div className="relative rounded-xl overflow-hidden border-2 border-border bg-muted">
-          <img 
+          <Image 
             src={value} 
-            alt="Product" 
+            alt="Product"
+            width={400}
+            height={192}
             className="w-full h-48 object-cover"
+            unoptimized
           />
           <Button
             type="button"

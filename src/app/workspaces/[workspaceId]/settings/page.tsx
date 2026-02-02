@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,11 +38,7 @@ export default function WorkspaceSettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchWorkspace();
-  }, [workspaceId]);
-
-  const fetchWorkspace = async () => {
+  const fetchWorkspace = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}`);
       if (!res.ok) throw new Error("ไม่พบ Workspace");
@@ -54,7 +50,11 @@ export default function WorkspaceSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId]);
+
+  useEffect(() => {
+    fetchWorkspace();
+  }, [fetchWorkspace]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

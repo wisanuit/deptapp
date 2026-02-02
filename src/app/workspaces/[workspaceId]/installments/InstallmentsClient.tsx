@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,7 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
 
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={48} height={48} className={`${sizeClasses[size]} rounded-full object-cover`} unoptimized />
     );
   }
 
@@ -78,7 +79,7 @@ function ProductImage({ itemName, imageUrl, size = "md" }: { itemName: string; i
 
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={itemName} className={`${sizeClasses[size]} rounded-lg object-cover`} />
+      <Image src={imageUrl} alt={itemName} width={64} height={64} className={`${sizeClasses[size]} rounded-lg object-cover`} unoptimized />
     );
   }
 

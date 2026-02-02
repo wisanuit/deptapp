@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
       const url = `/api/workspaces/${workspaceId}/notifications${showUnreadOnly ? "?unreadOnly=true" : ""}`;
@@ -38,11 +38,11 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, showUnreadOnly]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [workspaceId, showUnreadOnly]);
+  }, [fetchNotifications]);
 
   const handleRunCheck = async () => {
     try {

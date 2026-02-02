@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export default function LoanApplicationDetailPage() {
     note: "",
   });
 
-  const fetchApplication = async () => {
+  const fetchApplication = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/loan-applications/${applicationId}`);
       const data = await res.json();
@@ -63,11 +63,11 @@ export default function LoanApplicationDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, applicationId]);
 
   useEffect(() => {
     fetchApplication();
-  }, [workspaceId, applicationId]);
+  }, [fetchApplication]);
 
   const handleApprove = async () => {
     setProcessing(true);

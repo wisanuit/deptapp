@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,11 +42,7 @@ export default function InterestPolicyDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchPolicy();
-  }, [policyId]);
-
-  const fetchPolicy = async () => {
+  const fetchPolicy = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/interest-policies`);
       if (!res.ok) throw new Error("ไม่สามารถโหลดข้อมูลได้");
@@ -71,7 +67,11 @@ export default function InterestPolicyDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, policyId]);
+
+  useEffect(() => {
+    fetchPolicy();
+  }, [fetchPolicy]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

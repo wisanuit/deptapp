@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, ShoppingBag, Search, User, Package, CreditCard, FileText, Percent, X, Check, Calendar, ImageIcon, Plus, UserPlus, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,7 +64,7 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
 
     if (imageUrl) {
         return (
-            <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+            <Image src={imageUrl} alt={name} width={48} height={48} className={`${sizeClasses[size]} rounded-full object-cover`} unoptimized />
         );
     }
 
@@ -124,42 +125,42 @@ export default function NewInstallmentPage() {
         interestPolicyId: '',
     })
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [contactsRes, policiesRes, productsRes] = await Promise.all([
-                    fetch(`/api/workspaces/${workspaceId}/contacts`),
-                    fetch(`/api/workspaces/${workspaceId}/interest-policies`),
-                    fetch(`/api/workspaces/${workspaceId}/products`)
-                ])
+    const fetchData = useCallback(async () => {
+        try {
+            const [contactsRes, policiesRes, productsRes] = await Promise.all([
+                fetch(`/api/workspaces/${workspaceId}/contacts`),
+                fetch(`/api/workspaces/${workspaceId}/interest-policies`),
+                fetch(`/api/workspaces/${workspaceId}/products`)
+            ])
 
-                if (contactsRes.ok) {
-                    const data = await contactsRes.json()
-                    // API ส่ง contacts เป็น array โดยตรง
-                    setContacts(Array.isArray(data) ? data : (data.contacts || []))
-                }
-
-                if (policiesRes.ok) {
-                    const data = await policiesRes.json()
-                    // API ส่ง policies เป็น array โดยตรง
-                    setPolicies(Array.isArray(data) ? data : (data.policies || []))
-                }
-
-                if (productsRes.ok) {
-                    const data = await productsRes.json()
-                    setProducts(data.products || [])
-                    // รวมหมวดหมู่จาก API กับหมวดหมู่เริ่มต้น และลบที่ซ้ำ
-                    const apiCategories = data.categories || []
-                    const allCategories = Array.from(new Set([...apiCategories, ...defaultCategories]))
-                    setProductCategories(allCategories as string[])
-                }
-            } catch (error) {
-                console.error('Failed to fetch data:', error)
+            if (contactsRes.ok) {
+                const data = await contactsRes.json()
+                // API ส่ง contacts เป็น array โดยตรง
+                setContacts(Array.isArray(data) ? data : (data.contacts || []))
             }
-        }
 
-        fetchData()
+            if (policiesRes.ok) {
+                const data = await policiesRes.json()
+                // API ส่ง policies เป็น array โดยตรง
+                setPolicies(Array.isArray(data) ? data : (data.policies || []))
+            }
+
+            if (productsRes.ok) {
+                const data = await productsRes.json()
+                setProducts(data.products || [])
+                // รวมหมวดหมู่จาก API กับหมวดหมู่เริ่มต้น และลบที่ซ้ำ
+                const apiCategories = data.categories || []
+                const allCategories = Array.from(new Set([...apiCategories, ...defaultCategories]))
+                setProductCategories(allCategories as string[])
+            }
+        } catch (error) {
+            console.error('Failed to fetch data:', error)
+        }
     }, [workspaceId])
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
 
     // Click outside to close dropdowns
     useEffect(() => {
@@ -584,10 +585,13 @@ export default function NewInstallmentPage() {
                                         <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800">
                                             <div className="flex items-center gap-3">
                                                 {formData.productImageUrl ? (
-                                                    <img
+                                                    <Image
                                                         src={formData.productImageUrl}
                                                         alt={formData.productName}
+                                                        width={48}
+                                                        height={48}
                                                         className="w-12 h-12 rounded-lg object-cover"
+                                                        unoptimized
                                                     />
                                                 ) : (
                                                     <div className="w-12 h-12 rounded-lg bg-purple-200 dark:bg-purple-800 flex items-center justify-center">
@@ -686,10 +690,13 @@ export default function NewInstallmentPage() {
                                                                 className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors text-left"
                                                             >
                                                                 {product.imageUrl ? (
-                                                                    <img
+                                                                    <Image
                                                                         src={product.imageUrl}
                                                                         alt={product.name}
+                                                                        width={40}
+                                                                        height={40}
                                                                         className="w-10 h-10 rounded-lg object-cover"
+                                                                        unoptimized
                                                                     />
                                                                 ) : (
                                                                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
@@ -1010,10 +1017,13 @@ export default function NewInstallmentPage() {
                                 {formData.productName && (
                                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mb-4">
                                         {formData.productImageUrl ? (
-                                            <img
+                                            <Image
                                                 src={formData.productImageUrl}
                                                 alt={formData.productName}
+                                                width={40}
+                                                height={40}
                                                 className="w-10 h-10 rounded-lg object-cover"
+                                                unoptimized
                                             />
                                         ) : (
                                             <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Crown, Zap, ArrowUpRight } from "lucide-react";
@@ -33,11 +33,7 @@ export function UsageBadge({ feature, showUpgradeLink = true }: UsageBadgeProps)
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [feature]);
-
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     try {
       const res = await fetch(`/api/subscription/check-limit?feature=${feature}`);
       if (res.ok) {
@@ -49,7 +45,11 @@ export function UsageBadge({ feature, showUpgradeLink = true }: UsageBadgeProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [feature]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
 
   if (loading || !usage) {
     return null;
@@ -103,11 +103,7 @@ export function LimitCheck({
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [feature]);
-
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     try {
       const res = await fetch(`/api/subscription/check-limit?feature=${feature}`);
       if (res.ok) {
@@ -122,7 +118,11 @@ export function LimitCheck({
     } finally {
       setLoading(false);
     }
-  };
+  }, [feature, onLimitReached]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
 
   if (loading) {
     return <>{children}</>;

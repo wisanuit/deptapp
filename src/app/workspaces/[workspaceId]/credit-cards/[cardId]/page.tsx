@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,11 +67,7 @@ export default function CreditCardDetailPage() {
     interestRate: "",
   });
 
-  useEffect(() => {
-    fetchCard();
-  }, [cardId]);
-
-  const fetchCard = async () => {
+  const fetchCard = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/credit-cards/${cardId}`);
       if (!res.ok) throw new Error("ไม่พบข้อมูลบัตรเครดิต");
@@ -100,7 +96,11 @@ export default function CreditCardDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, cardId, toast]);
+
+  useEffect(() => {
+    fetchCard();
+  }, [fetchCard]);
 
   const handleSaveSettings = async () => {
     setSaving(true);

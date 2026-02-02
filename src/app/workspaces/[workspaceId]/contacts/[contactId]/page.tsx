@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,10 +44,11 @@ function Avatar({ name, size = "xl", imageUrl }: { name: string; size?: "sm" | "
     lg: "w-12 h-12 text-base",
     xl: "w-24 h-24 text-3xl"
   };
+  const sizePx = { sm: 32, md: 40, lg: 48, xl: 96 };
   
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover ring-4 ring-background shadow-lg`} />
+      <Image src={imageUrl} alt={name} width={sizePx[size]} height={sizePx[size]} className="rounded-full object-cover ring-4 ring-background shadow-lg" unoptimized />
     );
   }
   
@@ -85,15 +87,7 @@ export default function ContactSettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    fetchContact();
-    // Get current user
-    fetch('/api/auth/session').then(r => r.json()).then(data => {
-      setCurrentUserId(data?.user?.id || null);
-    });
-  }, [contactId]);
-
-  const fetchContact = async () => {
+  const fetchContact = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/contacts/${contactId}`);
       if (!res.ok) throw new Error("ไม่พบข้อมูลผู้ติดต่อ");
@@ -117,7 +111,15 @@ export default function ContactSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, contactId, toast]);
+
+  useEffect(() => {
+    fetchContact();
+    // Get current user
+    fetch('/api/auth/session').then(r => r.json()).then(data => {
+      setCurrentUserId(data?.user?.id || null);
+    });
+  }, [fetchContact]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

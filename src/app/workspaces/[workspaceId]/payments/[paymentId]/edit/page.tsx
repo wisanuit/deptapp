@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +47,7 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
   
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={48} height={48} className={`${sizeClasses[size]} rounded-full object-cover`} unoptimized />
     );
   }
   
@@ -75,11 +76,7 @@ export default function EditPaymentPage() {
     note: "",
   });
 
-  useEffect(() => {
-    fetchPayment();
-  }, [paymentId]);
-
-  const fetchPayment = async () => {
+  const fetchPayment = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/payments/${paymentId}`);
       if (!res.ok) throw new Error("ไม่พบข้อมูลรายการชำระ");
@@ -94,7 +91,11 @@ export default function EditPaymentPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, paymentId, toast]);
+
+  useEffect(() => {
+    fetchPayment();
+  }, [fetchPayment]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

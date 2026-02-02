@@ -1,6 +1,7 @@
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
+import Image from "next/image";
 import { calculateAccruedInterest, LoanWithPolicy } from "@/services/interest.service";
 
 type LoanType = {
@@ -42,7 +43,7 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
 
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={48} height={48} className={`${sizeClasses[size]} rounded-full object-cover`} unoptimized />
     );
   }
 
@@ -379,7 +380,7 @@ export default async function WorkspacePage({ params }: Props) {
                           {/* Product Image */}
                           <div className="w-14 h-14 rounded-xl bg-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0">
                             {plan.itemImageUrl ? (
-                              <img src={plan.itemImageUrl} alt={plan.itemName} className="w-full h-full object-cover" />
+                              <Image src={plan.itemImageUrl} alt={plan.itemName} width={56} height={56} className="w-full h-full object-cover" unoptimized />
                             ) : (
                               <ShoppingBag className="h-6 w-6 text-muted-foreground" />
                             )}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,7 @@ export default function ContactSettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchContact();
-  }, [contactId]);
-
-  const fetchContact = async () => {
+  const fetchContact = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/contacts/${contactId}`);
       if (!res.ok) throw new Error("ไม่พบข้อมูลผู้ติดต่อ");
@@ -61,7 +58,11 @@ export default function ContactSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, contactId]);
+
+  useEffect(() => {
+    fetchContact();
+  }, [fetchContact]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +170,7 @@ export default function ContactSettingsPage() {
               />
               {formData.imageUrl && (
                 <div className="mt-2">
-                  <img src={formData.imageUrl} alt="ตัวอย่างรูปผู้ติดต่อ" className="h-16 w-16 rounded-full object-cover border" />
+                  <Image src={formData.imageUrl} alt="ตัวอย่างรูปผู้ติดต่อ" width={64} height={64} className="rounded-full object-cover border" unoptimized />
                 </div>
               )}
             </div>

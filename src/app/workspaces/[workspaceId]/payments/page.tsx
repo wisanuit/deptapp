@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,7 +48,7 @@ export default function PaymentsPage() {
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/payments`);
       if (res.ok) {
@@ -60,11 +60,11 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId]);
 
   useEffect(() => {
     fetchPayments();
-  }, [workspaceId]);
+  }, [fetchPayments]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("th-TH", {

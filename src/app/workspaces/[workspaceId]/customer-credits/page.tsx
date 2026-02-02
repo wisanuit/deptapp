@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export default function CustomerCreditsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
 
-  const fetchCredits = async () => {
+  const fetchCredits = useCallback(async () => {
     try {
       const url = `/api/workspaces/${workspaceId}/customer-credits${filter ? `?riskLevel=${filter}` : ""}`;
       const res = await fetch(url);
@@ -45,11 +45,11 @@ export default function CustomerCreditsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, filter]);
 
   useEffect(() => {
     fetchCredits();
-  }, [workspaceId, filter]);
+  }, [fetchCredits]);
 
   const getRiskBadge = (risk: string) => {
     const badges: Record<string, { color: string; label: string }> = {

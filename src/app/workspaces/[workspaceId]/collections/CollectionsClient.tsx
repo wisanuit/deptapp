@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,10 +63,11 @@ function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "
     md: "w-10 h-10 text-sm",
     lg: "w-12 h-12 text-base"
   };
+  const sizePx = { sm: 32, md: 40, lg: 48 };
 
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover`} />
+      <Image src={imageUrl} alt={name} width={sizePx[size]} height={sizePx[size]} className="rounded-full object-cover" unoptimized />
     );
   }
 
