@@ -600,7 +600,7 @@ export default function ContactSettingsPage() {
                           ⚠️ คุณแน่ใจหรือไม่?
                         </p>
                         <p className="text-sm text-red-600">
-                          การลบ "{contact.name}" จะลบข้อมูลทั้งหมดที่เกี่ยวข้องอย่างถาวร
+                          การลบ {`"${contact.name}"`} จะลบข้อมูลทั้งหมดที่เกี่ยวข้องอย่างถาวร
                         </p>
                       </div>
                       <div className="flex gap-2">

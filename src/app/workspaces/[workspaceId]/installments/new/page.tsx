@@ -503,7 +503,7 @@ export default function NewInstallmentPage() {
                                                 {filteredContacts.length === 0 ? (
                                                     <div className="p-4 text-center">
                                                         <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                                        <p className="text-muted-foreground mb-3">ไม่พบลูกค้า "{contactSearch}"</p>
+                                                        <p className="text-muted-foreground mb-3">ไม่พบลูกค้า {`"${contactSearch}"`}</p>
                                                         <Button
                                                             type="button"
                                                             size="sm"
@@ -515,7 +515,7 @@ export default function NewInstallmentPage() {
                                                             className="rounded-full gap-1"
                                                         >
                                                             <UserPlus className="h-4 w-4" />
-                                                            สร้างลูกค้า "{contactSearch}"
+                                                            สร้างลูกค้า {`"${contactSearch}"`}
                                                         </Button>
                                                     </div>
                                                 ) : (
@@ -718,7 +718,7 @@ export default function NewInstallmentPage() {
                                                                         <Package className="h-5 w-5 text-purple-600" />
                                                                     </div>
                                                                     <div>
-                                                                        <p className="font-medium">ใช้ "{productSearch}" (ไม่บันทึกในแคตาล็อค)</p>
+                                                                        <p className="font-medium">ใช้ {`"${productSearch}"`} (ไม่บันทึกในแคตาล็อค)</p>
                                                                     </div>
                                                                 </button>
                                                                 <button
@@ -734,7 +734,7 @@ export default function NewInstallmentPage() {
                                                                         <Plus className="h-5 w-5 text-green-600" />
                                                                     </div>
                                                                     <div>
-                                                                        <p className="font-medium">เพิ่ม "{productSearch}" ในแคตาล็อค</p>
+                                                                        <p className="font-medium">เพิ่ม {`"${productSearch}"`} ในแคตาล็อค</p>
                                                                     </div>
                                                                 </button>
                                                             </>
@@ -1247,7 +1247,7 @@ export default function NewInstallmentPage() {
                                                     className="w-full px-4 py-2 text-left hover:bg-muted transition-colors text-sm text-purple-600 border-t"
                                                 >
                                                     <Plus className="h-4 w-4 inline mr-2" />
-                                                    สร้างหมวดหมู่ "{newProductData.category}"
+                                                    สร้างหมวดหมู่ {`"${newProductData.category}"`}
                                                 </button>
                                             )}
                                         </div>

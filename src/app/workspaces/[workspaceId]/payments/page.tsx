@@ -168,7 +168,7 @@ export default function PaymentsPage() {
     sum + p.allocations.reduce((s, a) => s + a.interestPaid, 0), 0);
 
   // Get unique months for filter
-  const months = [...new Set(payments.map(p => p.paymentDate.substring(0, 7)))].sort().reverse();
+  const months = Array.from(new Set(payments.map(p => p.paymentDate.substring(0, 7)))).sort().reverse();
 
   if (loading) {
     return (

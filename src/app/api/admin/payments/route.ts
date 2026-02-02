@@ -2,20 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const SUPER_ADMIN_EMAIL = "wisanu.it@gmail.com";
+import { isAdmin, SUPER_ADMIN_EMAIL } from "@/lib/admin";
 
 // ตรวจสอบสิทธิ์ Admin
 async function checkAdminAccess(session: any) {
-  if (!session?.user?.email) return false;
+  if (!session?.user?.id) return false;
   
-  if (session.user.email === SUPER_ADMIN_EMAIL) return true;
-  
-  const admin = await prisma.admin.findUnique({
-    where: { email: session.user.email },
-  });
-  
-  return !!admin;
+  return isAdmin(session.user.id);
 }
 
 /**

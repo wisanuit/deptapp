@@ -210,7 +210,7 @@ export default function AdminSlipOKPage() {
                 <li>ไปที่ <a href="https://slipok.com" target="_blank" className="text-blue-400 hover:underline">slipok.com</a></li>
                 <li>เพิ่ม LINE @slipok และสมัครสมาชิก</li>
                 <li>เลือก Package และกรอกข้อมูลธุรกิจ</li>
-                <li>เลือกช่องทาง "API"</li>
+                <li>เลือกช่องทาง &quot;API&quot;</li>
                 <li>คัดลอก Branch ID และ API Key มาใส่ด้านล่าง</li>
               </ol>
               <a

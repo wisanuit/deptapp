@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "../route";
+import { isAdmin } from "@/lib/admin";
 
 // GET - ดึงรายการคำขอสมัคร subscription
 export async function GET(request: Request) {

@@ -543,7 +543,7 @@ export default function CreditCardDetailPage() {
                     <div className="p-4 bg-red-100 rounded-lg">
                       <p className="text-sm text-red-700 font-medium mb-2">⚠️ คุณแน่ใจหรือไม่?</p>
                       <p className="text-sm text-red-600">
-                        การลบ "{card.name}" จะลบข้อมูลทั้งหมดอย่างถาวร
+                        การลบ {`"${card.name}"`} จะลบข้อมูลทั้งหมดอย่างถาวร
                       </p>
                     </div>
                     <div className="flex gap-2">
