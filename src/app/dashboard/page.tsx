@@ -17,8 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, daysBetween } from "@/lib/utils";
 import {
   Wallet, FileText, TrendingUp, Users,
-  Plus, Building2, ChevronRight,
-  CreditCard, Receipt, AlertCircle, Crown
+  Plus, Building2, ChevronRight, ArrowUpRight, ArrowDownRight,
+  CreditCard, Receipt, AlertCircle, Crown, BarChart3
 } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 import { CreateButton } from "@/components/ui/create-button";
@@ -99,250 +99,300 @@ export default async function DashboardPage() {
     return dueDate >= today && dueDate <= nextWeek;
   });
 
+  // ยอดสุทธิ
+  const netBalance = (totalLent + totalReceivableInterest) - (totalDebt + totalPayableInterest);
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Facebook-style Header */}
-      <header className="bg-card sticky top-0 z-50 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
+      {/* Modern Header */}
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
                 <Wallet className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-primary">Debt Manager</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Debt Manager
+              </h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link href="/subscription">
                 <Button variant="outline" size="sm" className="rounded-full gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200">
                   <Crown className="h-4 w-4" />
                   <span className="hidden md:inline">แผนการใช้งาน</span>
                 </Button>
               </Link>
-              <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span className="text-sm text-slate-600">{session.user.email}</span>
+              </div>
               <LogoutButton />
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
+            สวัสดี, {session.user.name || 'ผู้ใช้'}! 👋
+          </h2>
+          <p className="text-slate-500">นี่คือภาพรวมการเงินของคุณ</p>
+        </div>
+
+        {/* Stats Cards - Horizontal Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* ยอดให้กู้ */}
+          <Card className="relative overflow-hidden border-0 shadow-lg shadow-green-500/10">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600"></div>
+            <CardContent className="relative p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <ArrowUpRight className="h-5 w-5 text-white" />
+                </div>
+                <Badge className="bg-white/20 text-white border-0 text-xs">
+                  {receivableLoans.length} สัญญา
+                </Badge>
+              </div>
+              <p className="text-green-100 text-sm mb-1">รวมที่ต้องได้รับ</p>
+              <p className="text-xl md:text-2xl font-bold text-white">
+                {formatCurrency(totalLent + totalReceivableInterest)}
+              </p>
+              {overdueLoans.length > 0 && (
+                <div className="mt-2 flex items-center gap-1 text-amber-200 text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>เกินกำหนด {overdueLoans.length} สัญญา</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ยอดหนี้ */}
+          <Card className="relative overflow-hidden border-0 shadow-lg shadow-red-500/10">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600"></div>
+            <CardContent className="relative p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <ArrowDownRight className="h-5 w-5 text-white" />
+                </div>
+                <Badge className="bg-white/20 text-white border-0 text-xs">
+                  {payableLoans.length} สัญญา
+                </Badge>
+              </div>
+              <p className="text-red-100 text-sm mb-1">รวมที่ต้องจ่าย</p>
+              <p className="text-xl md:text-2xl font-bold text-white">
+                {formatCurrency(totalDebt + totalPayableInterest)}
+              </p>
+              {upcomingPayableLoans.length > 0 && (
+                <div className="mt-2 flex items-center gap-1 text-amber-200 text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>ครบกำหนด 7 วัน {upcomingPayableLoans.length}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ยอดสุทธิ */}
+          <Card className="relative overflow-hidden border-0 shadow-lg shadow-blue-500/10">
+            <div className={`absolute inset-0 bg-gradient-to-br ${netBalance >= 0 ? 'from-blue-500 to-indigo-600' : 'from-orange-500 to-red-600'}`}></div>
+            <CardContent className="relative p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <p className="text-white/80 text-sm mb-1">ยอดสุทธิ</p>
+              <p className="text-xl md:text-2xl font-bold text-white">
+                {formatCurrency(netBalance)}
+              </p>
+              <p className="text-white/60 text-xs mt-1">
+                {netBalance >= 0 ? 'กำไร' : 'ขาดทุน'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Workspaces */}
+          <Card className="relative overflow-hidden border-0 shadow-lg shadow-purple-500/10">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-violet-600"></div>
+            <CardContent className="relative p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <p className="text-purple-100 text-sm mb-1">Workspaces</p>
+              <p className="text-xl md:text-2xl font-bold text-white">
+                {workspaces.length}
+              </p>
+              <p className="text-white/60 text-xs mt-1">
+                สัญญาทั้งหมด {allLoans.length} รายการ
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Two Column Layout */}
         <div className="grid lg:grid-cols-3 gap-6">
+          {/* Left Column - Workspaces (2 cols) */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-0 shadow-xl shadow-slate-200/50">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Workspaces ของคุณ</CardTitle>
+                      <CardDescription>จัดการธุรกิจและสัญญาของคุณ</CardDescription>
+                    </div>
+                  </div>
+                  <CreateButton
+                    href="/workspaces/new"
+                    feature="WORKSPACES"
+                    size="sm"
+                    className="rounded-full gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">สร้างใหม่</span>
+                  </CreateButton>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {workspaces.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <Building2 className="h-10 w-10 text-slate-400" />
+                    </div>
+                    <p className="text-lg font-medium text-slate-600 mb-2">ยังไม่มี Workspace</p>
+                    <p className="text-slate-400 mb-6">สร้าง Workspace แรกเพื่อเริ่มจัดการหนี้สิน</p>
+                    <CreateButton href="/workspaces/new" feature="WORKSPACES" className="rounded-full gap-2">
+                      <Plus className="h-4 w-4" />
+                      สร้าง Workspace
+                    </CreateButton>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {workspaces.map((workspace: typeof workspaces[0]) => (
+                      <Link key={workspace.id} href={`/workspaces/${workspace.id}`}>
+                        <div className="group p-4 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all bg-white">
+                          <div className="flex items-start gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/25">
+                              {workspace.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                                {workspace.name}
+                              </h3>
+                              <p className="text-sm text-slate-400 flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {workspace.members.length} สมาชิก
+                              </p>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="text-center p-2 rounded-lg bg-slate-50">
+                              <p className="text-lg font-bold text-blue-600">{workspace._count.contacts}</p>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wide">ผู้ติดต่อ</p>
+                            </div>
+                            <div className="text-center p-2 rounded-lg bg-slate-50">
+                              <p className="text-lg font-bold text-indigo-600">{workspace._count.loans}</p>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wide">สัญญา</p>
+                            </div>
+                            <div className="text-center p-2 rounded-lg bg-slate-50">
+                              <p className="text-lg font-bold text-green-600">{workspace._count.payments}</p>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wide">การชำระ</p>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-
-          {/* Right Column - Summary Sidebar */}
+          {/* Right Column - Details */}
           <div className="space-y-6">
-            {/* สรุปรายการให้กู้ยืม */}
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-green-700">
-                  <TrendingUp className="h-5 w-5" />
-                  รายการให้กู้ยืม
-                </h3>
+            {/* รายละเอียดให้กู้ยืม */}
+            <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <CardTitle className="text-base text-green-700">รายการให้กู้ยืม</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-green-200">
-                    <span className="text-sm text-green-600 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      สัญญาที่เปิดอยู่
-                    </span>
-                    <span className="text-xl font-bold text-green-700">{receivableLoans.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">เงินต้นคงเหลือ</span>
+                    <span className="font-semibold text-slate-700">{formatCurrency(totalLent)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-green-200">
-                    <span className="text-sm text-green-600">เงินต้นคงเหลือ</span>
-                    <span className="text-lg font-bold text-green-700">{formatCurrency(totalLent)}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">ดอกเบี้ยค้างรับ</span>
+                    <span className="font-semibold text-green-600">{formatCurrency(totalReceivableInterest)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-green-200">
-                    <span className="text-sm text-green-600">ดอกเบี้ยค้างรับ</span>
-                    <span className="text-lg font-bold text-green-700">{formatCurrency(totalReceivableInterest)}</span>
+                  <div className="h-px bg-slate-100"></div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-green-50">
+                    <span className="font-medium text-green-700">รวมทั้งหมด</span>
+                    <span className="text-lg font-bold text-green-700">{formatCurrency(totalLent + totalReceivableInterest)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 bg-green-100 rounded-lg px-3 -mx-1">
-                    <span className="text-sm font-semibold text-green-700">รวมที่ต้องได้รับ</span>
-                    <span className="text-xl font-bold text-green-700">{formatCurrency(totalLent + totalReceivableInterest)}</span>
-                  </div>
-                  {overdueLoans.length > 0 && (
-                    <div className="flex justify-between items-center py-2 text-amber-600">
-                      <span className="text-sm flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        เกินกำหนด
-                      </span>
-                      <span className="font-bold">{overdueLoans.length} สัญญา</span>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* สรุปหนี้ที่ต้องจ่าย */}
-            <Card className="border-red-200 bg-red-50/50">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-red-700">
-                  <Receipt className="h-5 w-5" />
-                  หนี้ที่ต้องจ่าย
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-red-200">
-                    <span className="text-sm text-red-600 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      สัญญาที่เปิดอยู่
-                    </span>
-                    <span className="text-xl font-bold text-red-700">{payableLoans.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-red-200">
-                    <span className="text-sm text-red-600">เงินต้นคงเหลือ</span>
-                    <span className="text-lg font-bold text-red-700">{formatCurrency(totalDebt)}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-red-200">
-                    <span className="text-sm text-red-600">ดอกเบี้ยค้างจ่าย</span>
-                    <span className="text-lg font-bold text-red-700">{formatCurrency(totalPayableInterest)}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 bg-red-100 rounded-lg px-3 -mx-1">
-                    <span className="text-sm font-semibold text-red-700">รวมที่ต้องจ่าย</span>
-                    <span className="text-xl font-bold text-red-700">{formatCurrency(totalDebt + totalPayableInterest)}</span>
-                  </div>
-                  {upcomingPayableLoans.length > 0 && (
-                    <div className="flex justify-between items-center py-2 text-amber-600">
-                      <span className="text-sm flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        ครบกำหนดใน 7 วัน
-                      </span>
-                      <span className="font-bold">{upcomingPayableLoans.length} สัญญา</span>
-                    </div>
-                  )}
+            {/* รายละเอียดหนี้ */}
+            <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-red-500 to-rose-500"></div>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-red-600" />
+                  <CardTitle className="text-base text-red-700">หนี้ที่ต้องจ่าย</CardTitle>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Summary Stats */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-primary" />
-                  ภาพรวม
-                </h3>
+              </CardHeader>
+              <CardContent className="pt-0">
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Workspaces
-                    </span>
-                    <span className="text-xl font-bold">{workspaces.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">เงินต้นคงเหลือ</span>
+                    <span className="font-semibold text-slate-700">{formatCurrency(totalDebt)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      สัญญาทั้งหมด
-                    </span>
-                    <span className="text-xl font-bold">{allLoans.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">ดอกเบี้ยค้างจ่าย</span>
+                    <span className="font-semibold text-red-600">{formatCurrency(totalPayableInterest)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 bg-muted/50 rounded-lg px-3 -mx-1">
-                    <span className="text-sm font-semibold">ยอดสุทธิ (ได้รับ - ต้องจ่าย)</span>
-                    <span className={`text-xl font-bold ${(totalLent + totalReceivableInterest) - (totalDebt + totalPayableInterest) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency((totalLent + totalReceivableInterest) - (totalDebt + totalPayableInterest))}
-                    </span>
+                  <div className="h-px bg-slate-100"></div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-red-50">
+                    <span className="font-medium text-red-700">รวมทั้งหมด</span>
+                    <span className="text-lg font-bold text-red-700">{formatCurrency(totalDebt + totalPayableInterest)}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Quick Actions */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4">การดำเนินการ</h3>
-                <div className="space-y-2">
-                  <CreateButton
-                    href="/workspaces/new"
-                    feature="WORKSPACES"
-                    className="w-full rounded-lg gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    สร้าง Workspace ใหม่
-                  </CreateButton>
-                </div>
+            <Card className="border-0 shadow-xl shadow-slate-200/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">การดำเนินการด่วน</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                <CreateButton href="/workspaces/new" feature="WORKSPACES" className="w-full rounded-xl gap-2 h-11">
+                  <Plus className="h-4 w-4" />
+                  สร้าง Workspace ใหม่
+                </CreateButton>
+                <Link href="/subscription" className="block">
+                  <Button variant="outline" className="w-full rounded-xl gap-2 h-11 border-amber-200 text-amber-600 hover:bg-amber-50">
+                    <Crown className="h-4 w-4" />
+                    อัปเกรดแผน
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
-          {/* Left Column - Workspaces */}
-          <div className="lg:col-span-2">
-            {/* Workspaces Section */}
-            <div className="section-header mb-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <h2 className="section-title">Workspaces ของคุณ</h2>
-              </div>
-              <CreateButton
-                href="/workspaces/new"
-                feature="WORKSPACES"
-                className="rounded-full gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                สร้าง Workspace
-              </CreateButton>
-            </div>
-
-            {workspaces.length === 0 ? (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-lg text-muted-foreground mb-4">
-                    คุณยังไม่มี Workspace กรุณาสร้าง Workspace แรกของคุณ
-                  </p>
-                  <CreateButton
-                    href="/workspaces/new"
-                    feature="WORKSPACES"
-                    className="rounded-full gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    สร้าง Workspace
-                  </CreateButton>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {workspaces.map((workspace: typeof workspaces[0]) => (
-                  <Link key={workspace.id} href={`/workspaces/${workspace.id}`}>
-                    <Card className="hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all cursor-pointer group h-full">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                              {workspace.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <CardTitle className="text-lg">{workspace.name}</CardTitle>
-                              <CardDescription className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {workspace.members.length} สมาชิก
-                              </CardDescription>
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="flex justify-between pt-3 border-t border-border">
-                          <div className="text-center flex-1">
-                            <p className="text-lg font-bold text-primary">{workspace._count.contacts}</p>
-                            <p className="text-xs text-muted-foreground">ผู้ติดต่อ</p>
-                          </div>
-                          <div className="w-px bg-border" />
-                          <div className="text-center flex-1">
-                            <p className="text-lg font-bold text-primary">{workspace._count.loans}</p>
-                            <p className="text-xs text-muted-foreground">สัญญา</p>
-                          </div>
-                          <div className="w-px bg-border" />
-                          <div className="text-center flex-1">
-                            <p className="text-lg font-bold text-green-600">{workspace._count.payments}</p>
-                            <p className="text-xs text-muted-foreground">การชำระ</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
       </main>
     </div>
