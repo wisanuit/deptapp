@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { FeatureLockModal, type UsageData } from "@/components/ui/feature-lock";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
   ArrowLeft,
   Package,
@@ -601,6 +602,19 @@ export default function ProductsPage() {
             </div>
 
             <div className="space-y-4">
+              {/* รูปภาพสินค้า */}
+              <div>
+                <Label className="text-sm font-medium">รูปภาพสินค้า</Label>
+                <div className="mt-1.5">
+                  <ImageUpload
+                    value={productForm.imageUrl}
+                    onChange={(url) => setProductForm({ ...productForm, imageUrl: url || "" })}
+                    folder="products"
+                    placeholder="อัปโหลดรูปสินค้า"
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label className="text-sm font-medium">ชื่อสินค้า *</Label>
                 <Input
@@ -772,6 +786,19 @@ export default function ProductsPage() {
             </div>
 
             <div className="space-y-4">
+              {/* รูปภาพสินค้า */}
+              <div>
+                <Label className="text-sm font-medium">รูปภาพสินค้า</Label>
+                <div className="mt-1.5">
+                  <ImageUpload
+                    value={editProductForm.imageUrl}
+                    onChange={(url) => setEditProductForm({ ...editProductForm, imageUrl: url || "" })}
+                    folder="products"
+                    placeholder="อัปโหลดรูปสินค้า"
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label className="text-sm font-medium">ชื่อสินค้า *</Label>
                 <Input
