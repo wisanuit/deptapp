@@ -265,7 +265,7 @@ export default function WorkspaceLayout({
                 <LogoutButton />
               </div>
             ) : (
-              <LogoutButton />
+              <LogoutButton collapsed />
             )}
           </div>
         </div>

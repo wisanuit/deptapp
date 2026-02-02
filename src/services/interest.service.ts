@@ -1,5 +1,5 @@
 import type { Loan, InterestPolicy } from "@prisma/client";
-import { getDaysInMonth, daysBetween } from "@/lib/utils";
+import { getDaysInMonth, daysBetween, getThailandToday } from "@/lib/utils";
 
 export type LoanWithPolicy = Loan & {
   interestPolicy: InterestPolicy | null;
@@ -15,6 +15,108 @@ export interface InterestCalculationResult {
     days: number;
   }>;
 }
+
+/**
+ * =====================================================
+ * กฎหมายเกี่ยวกับดอกเบี้ยในประเทศไทย
+ * =====================================================
+ * 
+ * 1. พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560
+ *    - สถาบันการเงิน: สูงสุด 15% ต่อปี
+ *    - บุคคลธรรมดา: สูงสุด 15% ต่อปี (1.25% ต่อเดือน)
+ *    - หากเกินถือว่าผิดกฎหมาย ดอกเบี้ยเป็นโมฆะทั้งหมด
+ * 
+ * 2. ประมวลกฎหมายแพ่งและพาณิชย์ มาตรา 654
+ *    - ถ้าดอกเบี้ยเกิน 15% ต่อปี ศาลอาจลดลงได้
+ * 
+ * 3. บัตรเครดิต/สินเชื่อส่วนบุคคล
+ *    - บัตรเครดิต: สูงสุด 16% ต่อปี
+ *    - สินเชื่อส่วนบุคคล: สูงสุด 25% ต่อปี
+ *    - นาโนไฟแนนซ์: สูงสุด 33% ต่อปี
+ * 
+ * ⚠️ หมายเหตุ: เงินกู้นอกระบบที่เกิน 15%/ปี ถือว่าผิดกฎหมาย
+ * =====================================================
+ */
+
+// อัตราดอกเบี้ยสูงสุดตามกฎหมาย
+export const LEGAL_INTEREST_LIMITS = {
+  PERSONAL_YEARLY: 0.15,      // 15% ต่อปี
+  PERSONAL_MONTHLY: 0.0125,   // 1.25% ต่อเดือน
+  PERSONAL_DAILY: 0.00041,    // 0.041% ต่อวัน (15%/365)
+  CREDIT_CARD_YEARLY: 0.16,   // 16% ต่อปี
+  PERSONAL_LOAN_YEARLY: 0.25, // 25% ต่อปี
+  NANO_FINANCE_YEARLY: 0.33,  // 33% ต่อปี
+};
+
+/**
+ * ตรวจสอบว่าอัตราดอกเบี้ยเกินกฎหมายหรือไม่
+ */
+export function checkInterestRateLegality(
+  rate: number, 
+  mode: "YEARLY" | "MONTHLY" | "DAILY"
+): { isLegal: boolean; message: string; limit: number } {
+  let yearlyRate: number;
+  let limit: number;
+  
+  switch (mode) {
+    case "YEARLY":
+      yearlyRate = rate;
+      limit = LEGAL_INTEREST_LIMITS.PERSONAL_YEARLY;
+      break;
+    case "MONTHLY":
+      yearlyRate = rate * 12;
+      limit = LEGAL_INTEREST_LIMITS.PERSONAL_MONTHLY;
+      break;
+    case "DAILY":
+      yearlyRate = rate * 365;
+      limit = LEGAL_INTEREST_LIMITS.PERSONAL_DAILY;
+      break;
+  }
+
+  const isLegal = yearlyRate <= LEGAL_INTEREST_LIMITS.PERSONAL_YEARLY;
+  
+  if (!isLegal) {
+    return {
+      isLegal: false,
+      limit,
+      message: `⚠️ อัตราดอกเบี้ยเกินกฎหมาย! ตาม พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560 บุคคลธรรมดาเรียกดอกเบี้ยได้ไม่เกิน 15% ต่อปี (${(LEGAL_INTEREST_LIMITS.PERSONAL_MONTHLY * 100).toFixed(2)}% ต่อเดือน)`
+    };
+  }
+
+  return {
+    isLegal: true,
+    limit,
+    message: "✅ อัตราดอกเบี้ยอยู่ในกรอบกฎหมาย"
+  };
+}
+
+/**
+ * =====================================================
+ * สูตรการคำนวณดอกเบี้ย
+ * =====================================================
+ * 
+ * 1. ดอกเบี้ยรายปี (Yearly Interest)
+ *    ดอกเบี้ย = เงินต้น × อัตราดอกเบี้ย(%) × ระยะเวลา(ปี)
+ *    ตัวอย่าง: 10,000 × 0.10 × 1 = 1,000 บาท
+ * 
+ * 2. ดอกเบี้ยรายเดือน (Monthly Interest)
+ *    ดอกเบี้ย = เงินต้น × อัตราดอกเบี้ยต่อเดือน
+ *    ตัวอย่าง: 10,000 × 0.05 = 500 บาท/เดือน
+ * 
+ * 3. ดอกเบี้ยรายวัน (Daily Interest)
+ *    ดอกเบี้ย = เงินต้น × อัตราดอกเบี้ยต่อวัน × จำนวนวัน
+ *    ตัวอย่าง: 10,000 × 0.02 = 200 บาท/วัน
+ * 
+ * 4. ดอกเบี้ยแบบเงินต้นคงที่ (Flat Rate) - นอกระบบ
+ *    - ดอกเบี้ยรวม = เงินต้น × ดอกเบี้ย/เดือน × จำนวนเดือน
+ *    - ยอดรวม = เงินต้น + ดอกเบี้ยรวม
+ *    - ผ่อน/งวด = ยอดรวม ÷ จำนวนงวด
+ *    ตัวอย่าง: กู้ 10,000 ดอกเบี้ย 5%/เดือน 5 เดือน
+ *    - ดอกเบี้ยรวม = 500 × 5 = 2,500 บาท
+ *    - ยอดรวม = 12,500 บาท
+ *    - ผ่อน/เดือน = 2,500 บาท
+ * =====================================================
+ */
 
 /**
  * คำนวณดอกเบี้ยตาม Interest Policy
@@ -209,10 +311,55 @@ export function calculateInterestWithPayments(
 }
 
 /**
- * คำนวณดอกเบี้ยคงค้างจนถึงวันนี้
+ * คำนวณดอกเบี้ยคงค้างจนถึงวันนี้ (เวลาประเทศไทย)
+ * หากมีการชำระเงินแล้ว จะเริ่มนับจากวันที่ชำระล่าสุด
+ * 
+ * @param loan - ข้อมูลเงินกู้พร้อม allocations
+ * @param lastPaymentDate - วันที่ชำระเงินล่าสุด (optional)
  */
-export function calculateAccruedInterest(loan: LoanWithPolicy): number {
-  const today = new Date();
-  const result = calculateInterest(loan, new Date(loan.startDate), today);
+export function calculateAccruedInterest(
+  loan: LoanWithPolicy, 
+  lastPaymentDate?: Date | null
+): number {
+  // ใช้เวลาประเทศไทย (GMT+7)
+  const today = getThailandToday();
+  
+  // ถ้ามีวันที่ชำระล่าสุด ให้เริ่มนับจากวันนั้น
+  // ถ้าไม่มี ให้ใช้วันที่เริ่มกู้
+  const startFrom = lastPaymentDate ? new Date(lastPaymentDate) : new Date(loan.startDate);
+  
+  // ถ้าวันเริ่มนับอยู่หลังวันนี้ ให้ดอกเบี้ย = 0
+  if (startFrom >= today) {
+    return 0;
+  }
+  
+  const result = calculateInterest(loan, startFrom, today);
   return result.totalInterest;
+}
+
+/**
+ * คำนวณดอกเบี้ยคงค้างโดยคิดจากการชำระเงินทั้งหมด (เวลาประเทศไทย)
+ * เริ่มนับดอกเบี้ยใหม่หลังแต่ละครั้งที่ชำระ
+ * 
+ * @param loan - ข้อมูลเงินกู้
+ * @param allocations - รายการชำระเงิน
+ */
+export function calculateAccruedInterestFromPayments(
+  loan: LoanWithPolicy,
+  allocations: Array<{ payment: { paymentDate: Date } }>
+): number {
+  // หาวันที่ชำระเงินล่าสุด
+  if (allocations.length === 0) {
+    // ไม่มีการชำระเงิน ใช้วันที่เริ่มกู้
+    return calculateAccruedInterest(loan, null);
+  }
+  
+  // เรียงลำดับตามวันที่และหาวันล่าสุด
+  const sortedAllocations = [...allocations].sort(
+    (a, b) => new Date(b.payment.paymentDate).getTime() - new Date(a.payment.paymentDate).getTime()
+  );
+  
+  const lastPaymentDate = new Date(sortedAllocations[0].payment.paymentDate);
+  
+  return calculateAccruedInterest(loan, lastPaymentDate);
 }

@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExtendDueDateForm } from "./ExtendDueDateForm";
 import { LoanEditForm } from "./LoanEditForm";
-import { calculateAccruedInterest } from "@/services/interest.service";
+import { PaymentCalculator } from "./PaymentCalculator";
+import { calculateAccruedInterest, calculateAccruedInterestFromPayments, LEGAL_INTEREST_LIMITS, checkInterestRateLegality } from "@/services/interest.service";
 import { 
   ArrowLeft, CreditCard, Calendar, User, 
   Wallet, TrendingUp, Clock, Edit, 
-  ChevronRight, Receipt, FileText, AlertCircle
+  ChevronRight, Receipt, FileText, AlertCircle,
+  Calculator, Scale, AlertTriangle, CheckCircle2
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -100,10 +102,16 @@ export default async function LoanDetailPage({ params }: Props) {
   const totalInterestPaid = allocations.reduce((sum, item) => sum + item.interestPaid, 0);
 
   // คำนวณดอกเบี้ยแบบ realtime ถึงวันนี้
+  // *** สำคัญ: เริ่มนับดอกเบี้ยใหม่จากวันที่ชำระเงินล่าสุด ***
   const today = new Date();
   const realtimeInterest = loan.interestPolicy && loan.remainingPrincipal > 0
-    ? calculateAccruedInterest(loan as any)
+    ? calculateAccruedInterestFromPayments(loan as any, allocations)
     : loan.accruedInterest;
+  
+  // หาวันที่ชำระเงินล่าสุด
+  const lastPaymentDate = allocations.length > 0 
+    ? new Date(allocations[0].payment.paymentDate)
+    : null;
   
   // คำนวณจำนวนวันเกินกำหนด
   const dueDate = loan.dueDate ? new Date(loan.dueDate) : null;
@@ -207,10 +215,15 @@ export default async function LoanDetailPage({ params }: Props) {
                       {formatCurrency(displayInterest)}
                     </p>
                     {loan.interestPolicy && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        นโยบาย: {loan.interestPolicy.name}
-                        {isOverdue && <span className="text-red-500"> (+{overdueDays} วัน)</span>}
-                      </p>
+                      <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                        <p>นโยบาย: {loan.interestPolicy.name}</p>
+                        <p className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          เริ่มนับจาก: {lastPaymentDate ? formatDate(lastPaymentDate) : formatDate(loan.startDate)}
+                          {lastPaymentDate && <span className="text-blue-500">(วันที่ชำระล่าสุด)</span>}
+                        </p>
+                        {isOverdue && <p className="text-red-500">+{overdueDays} วันเกินกำหนด</p>}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -302,6 +315,25 @@ export default async function LoanDetailPage({ params }: Props) {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Payment Calculator */}
+            {loan.status !== "CLOSED" && (
+              <PaymentCalculator
+                remainingPrincipal={loan.remainingPrincipal}
+                accruedInterest={displayInterest}
+                interestPolicy={loan.interestPolicy ? {
+                  mode: loan.interestPolicy.mode,
+                  monthlyRate: loan.interestPolicy.monthlyRate,
+                  dailyRate: loan.interestPolicy.dailyRate,
+                  anchorDay: loan.interestPolicy.anchorDay,
+                  graceDays: loan.interestPolicy.graceDays,
+                } : null}
+                lastPaymentDate={lastPaymentDate?.toISOString() || null}
+                loanStartDate={loan.startDate.toISOString()}
+                borrowerName={loan.borrower.name}
+                lenderName={loan.lender.name}
+              />
+            )}
+
             {/* Contract Parties */}
             <Card>
               <CardHeader className="pb-3">
@@ -364,6 +396,19 @@ export default async function LoanDetailPage({ params }: Props) {
                     </span>
                     <span className="font-medium text-sm">{loan.interestPolicy ? loan.interestPolicy.name : "-"}</span>
                   </div>
+                  <div className="flex justify-between items-center py-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Calculator className="h-4 w-4" /> เริ่มนับดอกเบี้ยจาก
+                    </span>
+                    <div className="text-right">
+                      <span className={`font-medium text-sm ${lastPaymentDate ? 'text-blue-600' : ''}`}>
+                        {lastPaymentDate ? formatDate(lastPaymentDate) : formatDate(loan.startDate)}
+                      </span>
+                      {lastPaymentDate && (
+                        <p className="text-xs text-blue-500">วันที่ชำระล่าสุด</p>
+                      )}
+                    </div>
+                  </div>
                   {loan.note && (
                     <div className="py-2">
                       <span className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
@@ -413,6 +458,25 @@ export default async function LoanDetailPage({ params }: Props) {
                 />
               </CardContent>
             </Card>
+
+
+            {/* Legal Info Card */}
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Scale className="h-5 w-5 text-amber-600" />
+                  <CardTitle className="text-sm text-amber-800">ข้อมูลกฎหมาย</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>📜 พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560</p>
+                  <p>• สูงสุด 15% ต่อปี (1.25% ต่อเดือน)</p>
+                  <p>• ฝ่าฝืน: จำคุก 2 ปี ปรับ 200,000 บาท</p>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </main>

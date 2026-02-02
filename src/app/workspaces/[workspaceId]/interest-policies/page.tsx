@@ -7,10 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Home, Percent, Plus, ChevronRight, Calendar,
-  Clock, FileText, TrendingUp, Settings, ArrowLeft
+  Clock, FileText, TrendingUp, Settings, ArrowLeft,
+  AlertTriangle, Scale
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+// กฎหมายกำหนดอัตราดอกเบี้ยสูงสุด
+const LEGAL_LIMITS = {
+  PERSONAL_YEARLY: 0.15, // 15% ต่อปี
+  PERSONAL_MONTHLY: 0.0125, // 1.25% ต่อเดือน
+  PERSONAL_DAILY: 0.00041, // 0.041% ต่อวัน
+};
 
 interface Props {
   params: { workspaceId: string };
@@ -52,6 +60,16 @@ export default async function InterestPoliciesPage({ params }: Props) {
     if (rate === null) return "-";
     const percent = (rate * 100).toFixed(2);
     return `${percent}%${mode === "MONTHLY" ? "/เดือน" : "/วัน"}`;
+  };
+
+  // ตรวจสอบอัตราดอกเบี้ยเกินกฎหมาย
+  const checkLegalRate = (rate: number | null, mode: string): { isLegal: boolean; yearlyRate: number } => {
+    if (rate === null) return { isLegal: true, yearlyRate: 0 };
+    const yearlyRate = mode === "MONTHLY" ? rate * 12 : rate * 365;
+    return {
+      isLegal: yearlyRate <= LEGAL_LIMITS.PERSONAL_YEARLY,
+      yearlyRate,
+    };
   };
 
   // สถิติ
@@ -188,20 +206,27 @@ export default async function InterestPoliciesPage({ params }: Props) {
                 {policies.map((policy) => {
                   const rate = policy.mode === "MONTHLY" ? policy.monthlyRate : policy.dailyRate;
                   const isMonthly = policy.mode === "MONTHLY";
+                  const legalCheck = checkLegalRate(rate, policy.mode);
                   
                   return (
                     <Link
                       key={policy.id}
                       href={`/workspaces/${params.workspaceId}/interest-policies/${policy.id}`}
-                      className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-all group"
+                      className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-all group ${
+                        !legalCheck.isLegal ? 'bg-red-50/50' : ''
+                      }`}
                     >
                       {/* Icon */}
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        isMonthly 
-                          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                          : 'bg-gradient-to-br from-purple-500 to-purple-600'
+                        !legalCheck.isLegal
+                          ? 'bg-gradient-to-br from-red-500 to-red-600'
+                          : isMonthly 
+                            ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                            : 'bg-gradient-to-br from-purple-500 to-purple-600'
                       }`}>
-                        {isMonthly ? (
+                        {!legalCheck.isLegal ? (
+                          <AlertTriangle className="h-6 w-6 text-white" />
+                        ) : isMonthly ? (
                           <Calendar className="h-6 w-6 text-white" />
                         ) : (
                           <Clock className="h-6 w-6 text-white" />
@@ -215,18 +240,29 @@ export default async function InterestPoliciesPage({ params }: Props) {
                           <Badge 
                             variant="outline" 
                             className={`text-xs ${
-                              isMonthly 
-                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                : 'bg-purple-50 text-purple-700 border-purple-200'
+                              !legalCheck.isLegal
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : isMonthly 
+                                  ? 'bg-green-50 text-green-700 border-green-200' 
+                                  : 'bg-purple-50 text-purple-700 border-purple-200'
                             }`}
                           >
                             {isMonthly ? 'รายเดือน' : 'รายวัน'}
                           </Badge>
+                          {!legalCheck.isLegal && (
+                            <Badge variant="destructive" className="text-xs gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              เกินกฎหมาย
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                           <span className="flex items-center gap-1">
                             <TrendingUp className="h-3.5 w-3.5" />
                             {formatRateWithUnit(rate, policy.mode)}
+                            <span className="text-xs text-muted-foreground">
+                              ({(legalCheck.yearlyRate * 100).toFixed(2)}%/ปี)
+                            </span>
                           </span>
                           {isMonthly && policy.anchorDay && (
                             <span className="flex items-center gap-1">
@@ -250,7 +286,9 @@ export default async function InterestPoliciesPage({ params }: Props) {
                       {/* Rate Display */}
                       <div className="text-right hidden sm:block">
                         <p className={`text-2xl font-bold ${
-                          isMonthly ? 'text-green-600' : 'text-purple-600'
+                          !legalCheck.isLegal
+                            ? 'text-red-600'
+                            : isMonthly ? 'text-green-600' : 'text-purple-600'
                         }`}>
                           {formatRate(rate, policy.mode)}
                         </p>
@@ -268,8 +306,27 @@ export default async function InterestPoliciesPage({ params }: Props) {
           </CardContent>
         </Card>
 
+        {/* Legal Info Card */}
+        <Card className="mt-6 border-amber-200 bg-amber-50/50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Scale className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-medium mb-1 text-amber-800">📜 ข้อกำหนดทางกฎหมาย</h4>
+                <p className="text-sm text-amber-700">
+                  ตาม <strong>พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560</strong> กำหนดอัตราดอกเบี้ยสูงสุดไว้ที่{" "}
+                  <strong>15% ต่อปี</strong> (1.25% ต่อเดือน หรือ 0.041% ต่อวัน)<br />
+                  <span className="text-amber-600">โทษฝ่าฝืน: จำคุกไม่เกิน 2 ปี ปรับไม่เกิน 200,000 บาท หรือทั้งจำทั้งปรับ</span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Tips Card */}
-        <Card className="mt-6 border-dashed">
+        <Card className="mt-4 border-dashed">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">

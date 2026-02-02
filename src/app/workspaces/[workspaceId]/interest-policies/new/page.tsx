@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,17 @@ import {
   Info,
   CheckCircle2,
   Sparkles,
+  AlertTriangle,
+  Scale,
+  Calculator,
 } from "lucide-react";
+
+// อัตราดอกเบี้ยสูงสุดตามกฎหมาย
+const LEGAL_LIMITS = {
+  PERSONAL_YEARLY: 15,      // 15% ต่อปี
+  PERSONAL_MONTHLY: 1.25,   // 1.25% ต่อเดือน
+  PERSONAL_DAILY: 0.041,    // 0.041% ต่อวัน
+};
 
 export default function NewInterestPolicyPage() {
   const router = useRouter();
@@ -35,6 +45,25 @@ export default function NewInterestPolicyPage() {
     anchorDay: "1",
     graceDays: "0",
   });
+
+  // ตรวจสอบอัตราดอกเบี้ยตามกฎหมาย
+  const legalCheck = useMemo(() => {
+    const rate = formData.mode === "MONTHLY" 
+      ? parseFloat(formData.monthlyRate) || 0
+      : parseFloat(formData.dailyRate) || 0;
+    
+    const limit = formData.mode === "MONTHLY" 
+      ? LEGAL_LIMITS.PERSONAL_MONTHLY 
+      : LEGAL_LIMITS.PERSONAL_DAILY;
+    
+    const yearlyRate = formData.mode === "MONTHLY" 
+      ? rate * 12 
+      : rate * 365;
+
+    const isLegal = yearlyRate <= LEGAL_LIMITS.PERSONAL_YEARLY;
+    
+    return { rate, limit, yearlyRate, isLegal };
+  }, [formData.mode, formData.monthlyRate, formData.dailyRate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +149,109 @@ export default function NewInterestPolicyPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
+        {/* Legal Information Banner */}
+        <Card className="mb-6 border-amber-200 bg-amber-50/50 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Scale className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                  <span>กฎหมายเกี่ยวกับดอกเบี้ยในประเทศไทย</span>
+                </h3>
+                <div className="text-sm text-amber-700 space-y-1">
+                  <p><strong>พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560:</strong></p>
+                  <ul className="list-disc list-inside ml-2 space-y-0.5">
+                    <li>บุคคลธรรมดา: สูงสุด <strong>15% ต่อปี</strong> (1.25% ต่อเดือน)</li>
+                    <li>หากเกินถือว่าผิดกฎหมาย ดอกเบี้ยเป็นโมฆะทั้งหมด</li>
+                  </ul>
+                  <p className="mt-2 text-xs text-amber-600">
+                    ⚠️ หมายเหตุ: ระบบนี้ใช้สำหรับบันทึกข้อมูลเท่านั้น ผู้ใช้ต้องรับผิดชอบในการตั้งอัตราดอกเบี้ยที่ถูกต้องตามกฎหมาย
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calculation Formula Info */}
+        <Card className="mb-6 border-blue-200 bg-blue-50/50 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Calculator className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-800 mb-2">สูตรการคำนวณดอกเบี้ย</h3>
+                <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
+                  <div className="bg-white/60 rounded-lg p-3">
+                    <p className="font-medium mb-1">📅 รายเดือน (Monthly)</p>
+                    <p className="text-xs font-mono bg-blue-100 px-2 py-1 rounded">
+                      ดอกเบี้ย = เงินต้น × อัตรา/เดือน
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      ตัวอย่าง: 10,000 × 5% = 500 บาท/เดือน
+                    </p>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-3">
+                    <p className="font-medium mb-1">🕐 รายวัน (Daily)</p>
+                    <p className="text-xs font-mono bg-blue-100 px-2 py-1 rounded">
+                      ดอกเบี้ย = เงินต้น × อัตรา/วัน × วัน
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      ตัวอย่าง: 10,000 × 0.05% × 30 = 150 บาท
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <form onSubmit={handleSubmit}>
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Left Column - Form */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Legal Warning if rate exceeds limit */}
+              {legalCheck.rate > 0 && !legalCheck.isLegal && (
+                <Card className="border-red-300 bg-red-50 overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-red-800 mb-1">⚠️ อัตราดอกเบี้ยเกินกฎหมาย!</h3>
+                        <p className="text-sm text-red-700">
+                          อัตราที่ตั้ง ({legalCheck.rate}%{formData.mode === "MONTHLY" ? "/เดือน" : "/วัน"}) 
+                          คิดเป็น <strong>{legalCheck.yearlyRate.toFixed(2)}% ต่อปี</strong> ซึ่งเกินกว่าที่กฎหมายกำหนด (15% ต่อปี)
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          ตาม พ.ร.บ. ห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2560 หากเกิน 15% ต่อปี ดอกเบี้ยทั้งหมดจะเป็นโมฆะ
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Legal OK notification */}
+              {legalCheck.rate > 0 && legalCheck.isLegal && (
+                <Card className="border-green-300 bg-green-50 overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-green-800 mb-1">✅ อัตราดอกเบี้ยอยู่ในกรอบกฎหมาย</h3>
+                        <p className="text-sm text-green-700">
+                          อัตราที่ตั้ง ({legalCheck.rate}%{formData.mode === "MONTHLY" ? "/เดือน" : "/วัน"}) 
+                          คิดเป็น <strong>{legalCheck.yearlyRate.toFixed(2)}% ต่อปี</strong> ไม่เกินเกณฑ์ที่กฎหมายกำหนด (15% ต่อปี)
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Policy Name */}
               <Card className="overflow-hidden">
                 <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-5 py-4">
@@ -463,6 +591,12 @@ export default function NewInterestPolicyPage() {
                     <p className="text-sm text-muted-foreground mt-1">
                       {formData.mode === "MONTHLY" ? "ต่อเดือน" : "ต่อวัน"}
                     </p>
+                    {legalCheck.rate > 0 && (
+                      <p className={`text-xs mt-2 ${legalCheck.isLegal ? "text-green-600" : "text-red-600"}`}>
+                        ≈ {legalCheck.yearlyRate.toFixed(2)}% ต่อปี
+                        {!legalCheck.isLegal && " (เกินกฎหมาย!)"}
+                      </p>
+                    )}
                   </div>
 
                   {/* Summary */}
@@ -471,6 +605,12 @@ export default function NewInterestPolicyPage() {
                       <span className="text-sm text-muted-foreground">ประเภท</span>
                       <span className="font-medium">
                         {formData.mode === "MONTHLY" ? "รายเดือน" : "รายวัน"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">อัตราต่อปี</span>
+                      <span className={`font-medium ${legalCheck.isLegal ? "text-green-600" : "text-red-600"}`}>
+                        {legalCheck.yearlyRate.toFixed(2)}%
                       </span>
                     </div>
                     {formData.mode === "MONTHLY" && (
@@ -483,6 +623,16 @@ export default function NewInterestPolicyPage() {
                       <span className="text-sm text-muted-foreground">วันผ่อนผัน</span>
                       <span className="font-medium">
                         {parseInt(formData.graceDays) > 0 ? `${formData.graceDays} วัน` : "ไม่มี"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">สถานะกฎหมาย</span>
+                      <span className={`font-medium flex items-center gap-1 ${legalCheck.isLegal ? "text-green-600" : "text-red-600"}`}>
+                        {legalCheck.isLegal ? (
+                          <><CheckCircle2 className="h-4 w-4" /> ถูกกฎหมาย</>
+                        ) : (
+                          <><AlertTriangle className="h-4 w-4" /> เกินกฎหมาย</>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -499,6 +649,12 @@ export default function NewInterestPolicyPage() {
                         <span>ดอกเบี้ย{formData.mode === "MONTHLY" ? "/เดือน" : "/30วัน"}</span>
                         <span className={formData.mode === "MONTHLY" ? "text-green-600" : "text-purple-600"}>
                           +฿{exampleInterest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm border-t pt-1 mt-1">
+                        <span>ดอกเบี้ย/ปี (โดยประมาณ)</span>
+                        <span className="text-muted-foreground">
+                          ฿{(exampleInterest * (formData.mode === "MONTHLY" ? 12 : 365/30)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>

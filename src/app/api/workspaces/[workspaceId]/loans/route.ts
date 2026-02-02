@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createLoanSchema } from "@/lib/validations";
-import { calculateAccruedInterest, LoanWithPolicy } from "@/services/interest.service";
+import { calculateAccruedInterest, calculateAccruedInterestFromPayments, LoanWithPolicy } from "@/services/interest.service";
 
 interface Params {
   params: { workspaceId: string };
@@ -92,7 +92,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         return loan;
       }
       
-      const calculatedInterest = calculateAccruedInterest(loan as LoanWithPolicy);
+      // ใช้ calculateAccruedInterestFromPayments เพื่อเริ่มนับจากวันที่ชำระล่าสุด
+      const calculatedInterest = calculateAccruedInterestFromPayments(loan as LoanWithPolicy, loan.allocations);
       // Use the higher value between calculated and stored (to handle payments)
       const displayInterest = Math.max(calculatedInterest, loan.accruedInterest);
       

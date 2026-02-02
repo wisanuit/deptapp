@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { toThailandDateString } from "@/lib/utils";
 import {
   ArrowLeft,
   Wallet,
@@ -25,7 +27,16 @@ import {
   Receipt,
   Upload,
   Calculator,
+  TrendingUp,
 } from "lucide-react";
+
+interface InterestPolicyData {
+  mode: string;
+  monthlyRate: number | null;
+  dailyRate: number | null;
+  anchorDay: number | null;
+  graceDays: number | null;
+}
 
 interface Loan {
   id: string;
@@ -35,6 +46,8 @@ interface Loan {
   accruedInterest: number;
   startDate: string;
   loanType?: "RECEIVABLE" | "PAYABLE";
+  interestPolicy?: InterestPolicyData | null;
+  allocations?: Array<{ payment: { paymentDate: string } }>;
 }
 
 interface Contact {
@@ -48,6 +61,72 @@ interface Allocation {
   loanId: string;
   principalPaid: number;
   interestPaid: number;
+}
+
+// Helper: จำนวนวันในเดือน
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+// Helper: จำนวนวันระหว่างสองวัน
+function daysBetween(from: Date, to: Date): number {
+  const oneDay = 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.round((to.getTime() - from.getTime()) / oneDay));
+}
+
+// คำนวณดอกเบี้ยตามวันที่เลือก
+function calculateInterestToDate(
+  principal: number,
+  policy: InterestPolicyData | null | undefined,
+  fromDate: Date,
+  toDate: Date
+): number {
+  if (!policy || principal <= 0) return 0;
+  
+  // ถ้าวันคำนวณ <= วันเริ่มนับ ไม่มีดอกเบี้ย
+  if (toDate <= fromDate) return 0;
+  
+  const days = daysBetween(fromDate, toDate);
+  if (days <= 0) return 0;
+  
+  // DAILY Mode
+  if (policy.mode === "DAILY" && policy.dailyRate) {
+    return principal * policy.dailyRate * days;
+  }
+  
+  // MONTHLY Mode: คำนวณแบบ prorate ตามวันจริงของเดือน
+  if (policy.mode === "MONTHLY" && policy.monthlyRate) {
+    let totalInterest = 0;
+    let currentDate = new Date(fromDate);
+    
+    while (currentDate < toDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const daysInThisMonth = getDaysInMonth(year, month);
+      
+      // คำนวณ daily rate จาก monthly rate
+      const dailyRate = policy.monthlyRate / daysInThisMonth;
+      
+      // หาวันสุดท้ายของช่วงนี้
+      const endOfMonth = new Date(year, month + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+      
+      const periodEnd = endOfMonth < toDate ? new Date(year, month + 1, 1) : toDate;
+      
+      // นับจำนวนวันในช่วงนี้
+      const daysInPeriod = daysBetween(currentDate, periodEnd);
+      
+      if (daysInPeriod > 0) {
+        totalInterest += principal * dailyRate * daysInPeriod;
+      }
+      
+      currentDate = periodEnd;
+    }
+    
+    return totalInterest;
+  }
+  
+  return 0;
 }
 
 // Avatar component
@@ -117,9 +196,7 @@ export default function NewPaymentPage() {
   const [selectedLoanId, setSelectedLoanId] = useState<string>(prefillLoanId || "");
   const [selectedContactId, setSelectedContactId] = useState<string>("");
   const [amount, setAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [paymentDate, setPaymentDate] = useState(toThailandDateString());
   const [note, setNote] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState("");
   const [allocations, setAllocations] = useState<Allocation[]>([]);
@@ -187,6 +264,39 @@ export default function NewPaymentPage() {
   const selectedLoan = loans.find((l) => l.id === selectedLoanId);
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
 
+  // คำนวณดอกเบี้ยตามวันที่ชำระที่เลือก
+  const calculatedInterest = useMemo(() => {
+    if (!selectedLoan) return 0;
+    
+    const policy = selectedLoan.interestPolicy;
+    if (!policy) return selectedLoan.accruedInterest;
+    
+    // หาวันที่เริ่มนับดอกเบี้ย (จากวันชำระล่าสุดหรือวันเริ่มกู้)
+    let interestStartDate = new Date(selectedLoan.startDate);
+    
+    if (selectedLoan.allocations && selectedLoan.allocations.length > 0) {
+      // หาวันชำระล่าสุด
+      const sortedAllocations = [...selectedLoan.allocations].sort(
+        (a, b) => new Date(b.payment.paymentDate).getTime() - new Date(a.payment.paymentDate).getTime()
+      );
+      interestStartDate = new Date(sortedAllocations[0].payment.paymentDate);
+    }
+    
+    const toDate = new Date(paymentDate);
+    
+    return calculateInterestToDate(
+      selectedLoan.remainingPrincipal,
+      policy,
+      interestStartDate,
+      toDate
+    );
+  }, [selectedLoan, paymentDate]);
+
+  // ยอดรวมที่ต้องชำระ
+  const totalDue = selectedLoan 
+    ? selectedLoan.remainingPrincipal + calculatedInterest 
+    : 0;
+
   const handleAllocationChange = (
     loanId: string,
     field: "principalPaid" | "interestPaid",
@@ -227,11 +337,11 @@ export default function NewPaymentPage() {
         );
 
         if (manualAllocations.length === 0 && selectedLoanId) {
-          // Auto-calculate based on amount
+          // Auto-calculate based on amount (ใช้ calculatedInterest)
           const loan = loans.find((l) => l.id === selectedLoanId);
           if (loan) {
             const payAmount = parseFloat(amount);
-            let interestPaid = Math.min(loan.accruedInterest, payAmount);
+            let interestPaid = Math.min(calculatedInterest, payAmount);
             let principalPaid = Math.min(loan.remainingPrincipal, payAmount - interestPaid);
             body.allocations = [{ loanId: selectedLoanId, principalPaid, interestPaid }];
           }
@@ -283,8 +393,8 @@ export default function NewPaymentPage() {
       return manualAlloc;
     }
 
-    // Auto-calculate: interest first
-    let interestPaid = Math.min(selectedLoan.accruedInterest, payAmount);
+    // Auto-calculate: interest first (ใช้ calculatedInterest แทน)
+    let interestPaid = Math.min(calculatedInterest, payAmount);
     let principalPaid = Math.min(selectedLoan.remainingPrincipal, payAmount - interestPaid);
     return { principalPaid, interestPaid };
   };
@@ -762,6 +872,83 @@ export default function NewPaymentPage() {
                 </CardContent>
               </Card>
 
+              {/* Date & Interest Calculation Card - ย้ายมาก่อนจำนวนเงิน */}
+              {selectedLoan && (
+              <Card className="mb-6 border-blue-200">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                    วันที่ชำระ & คำนวณดอกเบี้ย
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Payment Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="paymentDate">เลือกวันที่ชำระ *</Label>
+                      <Input
+                        id="paymentDate"
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        className="rounded-lg h-12 text-lg"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ระบบจะคำนวณดอกเบี้ยถึงวันที่เลือก
+                      </p>
+                    </div>
+
+                    {/* Calculated Interest Display */}
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-amber-700 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          ดอกเบี้ยถึงวันที่ {new Date(paymentDate).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                        </span>
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-xs">
+                          คำนวณอัตโนมัติ
+                        </Badge>
+                      </div>
+                      <p className="text-2xl font-bold text-amber-600">
+                        {formatCurrency(calculatedInterest)}
+                      </p>
+                      {selectedLoan.interestPolicy && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          นโยบาย: {selectedLoan.interestPolicy.mode === "MONTHLY" ? "รายเดือน" : "รายวัน"} 
+                          {selectedLoan.interestPolicy.mode === "MONTHLY" && selectedLoan.interestPolicy.monthlyRate && 
+                            ` (${(selectedLoan.interestPolicy.monthlyRate * 100).toFixed(2)}%/เดือน)`
+                          }
+                          {selectedLoan.interestPolicy.mode === "DAILY" && selectedLoan.interestPolicy.dailyRate && 
+                            ` (${(selectedLoan.interestPolicy.dailyRate * 100).toFixed(3)}%/วัน)`
+                          }
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Total Due */}
+                    <div className="bg-gradient-to-r from-primary/5 to-blue-50 rounded-xl p-4 border border-primary/20">
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">เงินต้น:</span>
+                          <span className="font-medium">{formatCurrency(selectedLoan.remainingPrincipal)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">ดอกเบี้ย:</span>
+                          <span className="font-medium text-amber-600">{formatCurrency(calculatedInterest)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-primary/10">
+                        <span className="font-medium">ยอดรวมทั้งหมด:</span>
+                        <span className="text-xl font-bold text-primary">
+                          {formatCurrency(totalDue)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              )}
+
               {/* Amount Card */}
               <Card className="mb-6">
                 <CardContent className="p-6">
@@ -797,7 +984,7 @@ export default function NewPaymentPage() {
                       )}
                     </div>
 
-                    {/* Quick amount buttons */}
+                    {/* Quick amount buttons - ใช้ calculatedInterest */}
                     {selectedLoan && (
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -806,10 +993,10 @@ export default function NewPaymentPage() {
                           size="sm"
                           className="rounded-full"
                           onClick={() =>
-                            setAmount(selectedLoan.accruedInterest.toString())
+                            setAmount(calculatedInterest.toFixed(2))
                           }
                         >
-                          ดอกเบี้ยทั้งหมด ({formatCurrency(selectedLoan.accruedInterest)})
+                          ดอกเบี้ย ({formatCurrency(calculatedInterest)})
                         </Button>
                         <Button
                           type="button"
@@ -817,20 +1004,21 @@ export default function NewPaymentPage() {
                           size="sm"
                           className="rounded-full"
                           onClick={() =>
-                            setAmount(
-                              (
-                                selectedLoan.remainingPrincipal +
-                                selectedLoan.accruedInterest
-                              ).toString()
-                            )
+                            setAmount((totalDue / 2).toFixed(2))
                           }
                         >
-                          ชำระทั้งหมด (
-                          {formatCurrency(
-                            selectedLoan.remainingPrincipal +
-                              selectedLoan.accruedInterest
-                          )}
-                          )
+                          ครึ่งหนึ่ง ({formatCurrency(totalDue / 2)})
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() =>
+                            setAmount(totalDue.toFixed(2))
+                          }
+                        >
+                          ชำระทั้งหมด ({formatCurrency(totalDue)})
                         </Button>
                       </div>
                     )}
@@ -838,27 +1026,15 @@ export default function NewPaymentPage() {
                 </CardContent>
               </Card>
 
-              {/* Date & Note Card */}
+              {/* Note & Attachment Card */}
               <Card className="mb-6">
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-green-600" />
-                    รายละเอียดเพิ่มเติม
+                    <FileText className="h-5 w-5 text-green-600" />
+                    หมายเหตุและเอกสาร
                   </h3>
 
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="paymentDate">วันที่ชำระ *</Label>
-                      <Input
-                        id="paymentDate"
-                        type="date"
-                        value={paymentDate}
-                        onChange={(e) => setPaymentDate(e.target.value)}
-                        className="rounded-lg"
-                        required
-                      />
-                    </div>
-
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="attachment" className="flex items-center gap-2">
                         <Upload className="h-4 w-4" />
@@ -888,18 +1064,18 @@ export default function NewPaymentPage() {
                         </p>
                       )}
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="note">หมายเหตุ</Label>
-                    <Textarea
-                      id="note"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="หมายเหตุเพิ่มเติม..."
-                      className="rounded-lg"
-                      rows={2}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="note">หมายเหตุ</Label>
+                      <Textarea
+                        id="note"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="หมายเหตุเพิ่มเติม..."
+                        className="rounded-lg"
+                        rows={2}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -981,7 +1157,7 @@ export default function NewPaymentPage() {
                             type="number"
                             min="0"
                             step="0.01"
-                            max={selectedLoan.accruedInterest}
+                            max={calculatedInterest}
                             placeholder="0"
                             value={
                               allocations.find((a) => a.loanId === selectedLoanId)
@@ -997,7 +1173,7 @@ export default function NewPaymentPage() {
                             className="rounded-lg"
                           />
                           <p className="text-xs text-muted-foreground">
-                            ดอกค้าง: {formatCurrency(selectedLoan.accruedInterest)}
+                            ดอกค้าง: {formatCurrency(calculatedInterest)}
                           </p>
                         </div>
                       </div>
@@ -1071,19 +1247,21 @@ export default function NewPaymentPage() {
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">ดอกเบี้ยค้าง</span>
-                          <span className="font-medium text-green-600">
-                            {formatCurrency(selectedLoan.accruedInterest)}
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            ดอกเบี้ย
+                            <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700">
+                              คำนวณ
+                            </Badge>
+                          </span>
+                          <span className="font-medium text-amber-600">
+                            {formatCurrency(calculatedInterest)}
                           </span>
                         </div>
                         <div className="h-px bg-border my-2" />
                         <div className="flex justify-between">
                           <span className="font-medium">ยอดรวมคงค้าง</span>
                           <span className="font-bold text-lg">
-                            {formatCurrency(
-                              selectedLoan.remainingPrincipal +
-                                selectedLoan.accruedInterest
-                            )}
+                            {formatCurrency(totalDue)}
                           </span>
                         </div>
                       </div>
@@ -1123,9 +1301,7 @@ export default function NewPaymentPage() {
                               </span>
                               <span className="font-bold">
                                 {formatCurrency(
-                                  selectedLoan.remainingPrincipal +
-                                    selectedLoan.accruedInterest -
-                                    parseFloat(amount)
+                                  totalDue - parseFloat(amount)
                                 )}
                               </span>
                             </div>
