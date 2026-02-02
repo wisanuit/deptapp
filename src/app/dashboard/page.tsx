@@ -2,6 +2,7 @@ import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { calculateAccruedInterest, LoanWithPolicy } from "@/services/interest.service";
+import { getCurrentPlan, getFeatureLimit, getCurrentUsage } from "@/services/subscription.service";
 
 type LoanType = {
   id: string;
@@ -18,7 +19,7 @@ import { formatCurrency, daysBetween } from "@/lib/utils";
 import {
   Wallet, FileText, TrendingUp, Users,
   Plus, Building2, ChevronRight, ArrowUpRight, ArrowDownRight,
-  CreditCard, Receipt, AlertCircle, Crown, BarChart3
+  CreditCard, Receipt, AlertCircle, Crown, BarChart3, Sparkles, Shield
 } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 import { CreateButton } from "@/components/ui/create-button";
@@ -101,6 +102,11 @@ export default async function DashboardPage() {
 
   // ยอดสุทธิ
   const netBalance = (totalLent + totalReceivableInterest) - (totalDebt + totalPayableInterest);
+
+  // ดึงข้อมูลแผนปัจจุบัน
+  const currentPlan = await getCurrentPlan(session.user.id);
+  const workspacesLimit = await getFeatureLimit(session.user.id, "WORKSPACES");
+  const workspacesUsage = await getCurrentUsage(session.user.id, "WORKSPACES");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
@@ -374,6 +380,70 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
+            {/* แผนการใช้งานปัจจุบัน */}
+            <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-amber-600" />
+                  <CardTitle className="text-base text-amber-700">แผนการใช้งาน</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      currentPlan?.name === 'FREE' 
+                        ? 'bg-slate-100' 
+                        : currentPlan?.name === 'PRO' 
+                          ? 'bg-gradient-to-br from-amber-400 to-orange-500' 
+                          : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                    }`}>
+                      <Crown className={`h-6 w-6 ${
+                        currentPlan?.name === 'FREE' ? 'text-slate-500' : 'text-white'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg text-slate-800">{currentPlan?.displayName || 'Free'}</p>
+                      <p className="text-sm text-slate-500">{currentPlan?.name === 'FREE' ? 'แผนเริ่มต้น' : 'แผนพรีเมียม'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Workspaces</span>
+                      <span className="font-medium text-slate-700">
+                        {workspacesUsage} / {workspacesLimit === -1 ? '∞' : workspacesLimit}
+                      </span>
+                    </div>
+                    {workspacesLimit !== -1 && (
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            workspacesUsage / workspacesLimit > 0.8 
+                              ? 'bg-red-500' 
+                              : workspacesUsage / workspacesLimit > 0.5 
+                                ? 'bg-amber-500' 
+                                : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min((workspacesUsage / workspacesLimit) * 100, 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {currentPlan?.name === 'FREE' && (
+                    <Link href="/subscription" className="block">
+                      <Button className="w-full rounded-xl gap-2 h-11 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                        <Crown className="h-4 w-4" />
+                        อัปเกรดเพื่อปลดล็อค
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card className="border-0 shadow-xl shadow-slate-200/50">
               <CardHeader className="pb-3">
@@ -395,6 +465,28 @@ export default async function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200/50 bg-white/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Wallet className="h-4 w-4" />
+              <span className="text-sm">© {new Date().getFullYear()} Debt Manager. All rights reserved.</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link href="/terms" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                <FileText className="h-4 w-4" />
+                <span>เงื่อนไขการใช้งาน</span>
+              </Link>
+              <Link href="/privacy" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                <Shield className="h-4 w-4" />
+                <span>นโยบายความเป็นส่วนตัว</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
