@@ -68,3 +68,30 @@ export function HeaderButtons() {
     </>
   );
 }
+
+// ปุ่มสำหรับ Pricing cards
+interface PricingButtonProps {
+  planName: string;
+  isPro: boolean;
+  isBusiness: boolean;
+}
+
+export function PricingButton({ planName, isPro, isBusiness }: PricingButtonProps) {
+  const { openLogin } = useLoginDialog();
+
+  return (
+    <Button
+      size="lg"
+      onClick={openLogin}
+      className={`w-full rounded-xl font-semibold ${
+        isPro
+          ? "bg-white text-indigo-600 hover:bg-indigo-50"
+          : isBusiness
+          ? "bg-white text-slate-900 hover:bg-slate-100"
+          : "bg-indigo-600 text-white hover:bg-indigo-700"
+      }`}
+    >
+      {planName === "FREE" ? "เริ่มต้นฟรี" : "สมัครตอนนี้"}
+    </Button>
+  );
+}

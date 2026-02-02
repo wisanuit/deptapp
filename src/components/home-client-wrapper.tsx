@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { LoginDialogProvider, HeroButtons, HeaderButtons } from "@/components/home-buttons";
+import { LoginDialogProvider, HeroButtons, HeaderButtons, PricingButton } from "@/components/home-buttons";
 import { CookieConsent } from "@/components/cookie-consent";
 
 export function HomeClientWrapper({ children }: { children: ReactNode }) {
@@ -13,4 +13,4 @@ export function HomeClientWrapper({ children }: { children: ReactNode }) {
   );
 }
 
-export { HeroButtons, HeaderButtons };
+export { HeroButtons, HeaderButtons, PricingButton };

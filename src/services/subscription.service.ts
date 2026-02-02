@@ -52,6 +52,59 @@ export const PLAN_PRICING = {
   BUSINESS: { monthly: 899, yearly: 8990 },
 };
 
+// ดึงแผนทั้งหมดจากฐานข้อมูล (สำหรับหน้า pricing)
+export async function getAllPlans() {
+  const plans = await prisma.plan.findMany({
+    where: { isActive: true },
+    include: { limits: true },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  // ถ้าไม่มีแผนในฐานข้อมูล ให้ return ค่า default
+  if (plans.length === 0) {
+    return [
+      {
+        id: "free",
+        name: "FREE",
+        displayName: "ฟรี",
+        description: "เริ่มต้นใช้งานฟรี เหมาะสำหรับการทดลองใช้",
+        price: 0,
+        yearlyPrice: 0,
+        limits: Object.entries(DEFAULT_PLAN_LIMITS.FREE).map(([feature, limit]) => ({
+          feature,
+          limit,
+        })),
+      },
+      {
+        id: "pro",
+        name: "PRO",
+        displayName: "โปร",
+        description: "สำหรับผู้ใช้งานจริงจัง ฟีเจอร์ครบถ้วน",
+        price: 299,
+        yearlyPrice: 2990,
+        limits: Object.entries(DEFAULT_PLAN_LIMITS.PRO).map(([feature, limit]) => ({
+          feature,
+          limit,
+        })),
+      },
+      {
+        id: "business",
+        name: "BUSINESS",
+        displayName: "ธุรกิจ",
+        description: "สำหรับธุรกิจ ไม่จำกัดการใช้งาน",
+        price: 899,
+        yearlyPrice: 8990,
+        limits: Object.entries(DEFAULT_PLAN_LIMITS.BUSINESS).map(([feature, limit]) => ({
+          feature,
+          limit,
+        })),
+      },
+    ];
+  }
+
+  return plans;
+}
+
 // ดึง subscription ของ user
 export async function getUserSubscription(userId: string) {
   const subscription = await prisma.subscription.findUnique({
@@ -379,17 +432,6 @@ export const FEATURE_NAMES: Record<FeatureType, string> = {
   STORAGE_MB: "พื้นที่จัดเก็บ (MB)",
   TEAM_MEMBERS: "สมาชิกทีม",
 };
-
-// ดึง plans ทั้งหมดจากฐานข้อมูล พร้อม limits
-export async function getAllPlans() {
-  return await prisma.plan.findMany({
-    where: { isActive: true },
-    include: {
-      limits: true,
-    },
-    orderBy: { sortOrder: "asc" },
-  });
-}
 
 // ดึง upgrade options จากฐานข้อมูล
 export async function getUpgradeOptionsFromDB(

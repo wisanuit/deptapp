@@ -23,8 +23,13 @@ import {
   AlertCircle,
   Package,
   Receipt,
+  Crown,
+  Sparkles,
+  Zap,
+  Building2,
 } from "lucide-react";
-import { HomeClientWrapper, HeroButtons, HeaderButtons } from "@/components/home-client-wrapper";
+import { HomeClientWrapper, HeroButtons, HeaderButtons, PricingButton } from "@/components/home-client-wrapper";
+import { getAllPlans } from "@/services/subscription.service";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +39,9 @@ export default async function HomePage() {
   if (session) {
     redirect("/dashboard");
   }
+
+  // ดึงแผนราคาจากฐานข้อมูล
+  const plans = await getAllPlans();
 
   return (
     <HomeClientWrapper>
@@ -453,6 +461,154 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Pricing Section */}
+        <section id="pricing" className="py-24 bg-gradient-to-b from-white to-slate-50 relative overflow-hidden scroll-mt-20">
+          {/* Background decoration */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-100/50 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-100/50 rounded-full blur-3xl"></div>
+          
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-100 mb-6">
+                <Sparkles className="h-4 w-4 mr-2" />
+                แผนราคา
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-slate-900">
+                เลือกแผนที่เหมาะกับคุณ
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                เริ่มต้นฟรี ไม่มีบัตรเครดิต อัปเกรดเมื่อพร้อม
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {plans.map((plan, index) => {
+                const isPro = plan.name === "PRO";
+                const isBusiness = plan.name === "BUSINESS";
+                const planLimits = plan.limits as { feature: string; limit: number }[];
+                const workspacesLimit = planLimits.find((l) => l.feature === "WORKSPACES")?.limit ?? 0;
+                const contactsLimit = planLimits.find((l) => l.feature === "CONTACTS")?.limit ?? 0;
+                const loansLimit = planLimits.find((l) => l.feature === "LOANS")?.limit ?? 0;
+                const teamLimit = planLimits.find((l) => l.feature === "TEAM_MEMBERS")?.limit ?? 0;
+                const storageLimit = planLimits.find((l) => l.feature === "STORAGE_MB")?.limit ?? 0;
+
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative border-0 shadow-xl transition-all duration-300 hover:-translate-y-2 ${
+                      isPro
+                        ? "bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-indigo-500/30"
+                        : isBusiness
+                        ? "bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-slate-500/30"
+                        : "bg-white shadow-slate-200/50"
+                    }`}
+                  >
+                    {isPro && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold px-4 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          <Crown className="h-4 w-4" />
+                          ยอดนิยม
+                        </div>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pt-8 pb-4">
+                      <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
+                        isPro
+                          ? "bg-white/20"
+                          : isBusiness
+                          ? "bg-white/10"
+                          : "bg-indigo-50"
+                      }`}>
+                        {plan.name === "FREE" && <Zap className="h-8 w-8 text-indigo-600" />}
+                        {isPro && <Crown className="h-8 w-8 text-white" />}
+                        {isBusiness && <Building2 className="h-8 w-8 text-white" />}
+                      </div>
+                      <CardTitle className={`text-2xl font-bold mb-2 ${
+                        isPro || isBusiness ? "text-white" : "text-slate-900"
+                      }`}>
+                        {plan.displayName}
+                      </CardTitle>
+                      <p className={`text-sm ${
+                        isPro ? "text-indigo-200" : isBusiness ? "text-slate-400" : "text-slate-500"
+                      }`}>
+                        {plan.description}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="pb-8">
+                      <div className="text-center mb-6">
+                        <div className="flex items-baseline justify-center gap-1">
+                          <span className={`text-4xl font-bold ${
+                            isPro || isBusiness ? "text-white" : "text-slate-900"
+                          }`}>
+                            ฿{plan.price.toLocaleString()}
+                          </span>
+                          <span className={isPro || isBusiness ? "text-white/70" : "text-slate-500"}>/เดือน</span>
+                        </div>
+                        {plan.yearlyPrice && plan.yearlyPrice > 0 && (
+                          <p className={`text-sm mt-1 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-slate-400" : "text-slate-500"
+                          }`}>
+                            หรือ ฿{plan.yearlyPrice.toLocaleString()}/ปี (ประหยัด 17%)
+                          </p>
+                        )}
+                      </div>
+
+                      <ul className="space-y-3 mb-8">
+                        <li className="flex items-center gap-3">
+                          <CheckCircle2 className={`h-5 w-5 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-green-400" : "text-green-600"
+                          }`} />
+                          <span className={isPro || isBusiness ? "text-white/90" : "text-slate-700"}>
+                            {workspacesLimit === -1 ? "ไม่จำกัด" : workspacesLimit} Workspaces
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <CheckCircle2 className={`h-5 w-5 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-green-400" : "text-green-600"
+                          }`} />
+                          <span className={isPro || isBusiness ? "text-white/90" : "text-slate-700"}>
+                            {contactsLimit === -1 ? "ไม่จำกัด" : contactsLimit} ผู้ติดต่อ
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <CheckCircle2 className={`h-5 w-5 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-green-400" : "text-green-600"
+                          }`} />
+                          <span className={isPro || isBusiness ? "text-white/90" : "text-slate-700"}>
+                            {loansLimit === -1 ? "ไม่จำกัด" : loansLimit} สัญญา
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <CheckCircle2 className={`h-5 w-5 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-green-400" : "text-green-600"
+                          }`} />
+                          <span className={isPro || isBusiness ? "text-white/90" : "text-slate-700"}>
+                            {teamLimit === -1 ? "ไม่จำกัด" : teamLimit} สมาชิกทีม
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <CheckCircle2 className={`h-5 w-5 ${
+                            isPro ? "text-indigo-200" : isBusiness ? "text-green-400" : "text-green-600"
+                          }`} />
+                          <span className={isPro || isBusiness ? "text-white/90" : "text-slate-700"}>
+                            {storageLimit === -1 ? "10 GB" : storageLimit >= 1024 ? `${(storageLimit / 1024).toFixed(0)} GB` : `${storageLimit} MB`} พื้นที่เก็บข้อมูล
+                          </span>
+                        </li>
+                      </ul>
+
+                      <PricingButton 
+                        planName={plan.name} 
+                        isPro={isPro} 
+                        isBusiness={isBusiness} 
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* Multi-tenant Section - Modern Dark Theme */}
         <section className="py-24 bg-[#0F172A] relative overflow-hidden">
            {/* Subtle grid pattern overlay */}
@@ -537,7 +693,7 @@ export default async function HomePage() {
             </div>
             <div className="flex gap-8 text-sm text-slate-500 font-medium">
                 <Link href="#" className="hover:text-indigo-600 transition-colors">ฟีเจอร์</Link>
-                <Link href="#" className="hover:text-indigo-600 transition-colors">ราคา</Link>
+                <Link href="#pricing" className="hover:text-indigo-600 transition-colors">ราคา</Link>
                 <Link href="#" className="hover:text-indigo-600 transition-colors">ติดต่อเรา</Link>
             </div>
           </div>

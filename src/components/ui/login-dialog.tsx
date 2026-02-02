@@ -125,7 +125,7 @@ export function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
             <p className="text-center text-xs text-muted-foreground pt-2">
               การเข้าสู่ระบบหมายความว่าคุณยอมรับ
               <br />
-              <a href="#" className="text-red-500 hover:underline">เงื่อนไขการใช้งาน</a> และ <a href="#" className="text-red-500 hover:underline">นโยบายความเป็นส่วนตัว</a>
+              <a href="/terms" className="text-red-500 hover:underline">เงื่อนไขการใช้งาน</a> และ <a href="/privacy" className="text-red-500 hover:underline">นโยบายความเป็นส่วนตัว</a>
             </p>
           </div>
         </div>
