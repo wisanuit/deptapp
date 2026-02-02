@@ -1,0 +1,820 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// AUTH & USER MODELS
+// ==========================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  isAdmin       Boolean   @default(false)
+  isSuperAdmin  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships WorkspaceMember[]
+  contacts    Contact[]   @relation("UserContact")
+  subscription Subscription?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// WORKSPACE (MULTI-TENANT)
+// ==========================================
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members          WorkspaceMember[]
+  contacts         Contact[]
+  loans            Loan[]
+  payments         Payment[]
+  interestPolicies InterestPolicy[]
+  creditCards      CreditCard[]
+  notifications    Notification[]
+  installmentPlans InstallmentPlan[]
+  loanApplications LoanApplication[]
+  collectionCases  CollectionCase[]
+  customerCredits  CustomerCredit[]
+  products         Product[]
+  subscription     Subscription?
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ==========================================
+// CONTACTS
+// ==========================================
+
+model Contact {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  phone       String?
+  email       String?
+  imageUrl    String?
+  userId      String?
+  note        String?
+  type        ContactType @default(BOTH)
+  // ข้อมูลบัญชีธนาคาร
+  bankName      String?
+  bankAccountNo String?
+  bankAccountName String?
+  promptPayNo   String?
+  qrCodeUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user             User?              @relation("UserContact", fields: [userId], references: [id], onDelete: Cascade)
+  loansAsBorrower  Loan[]             @relation("Borrower")
+  loansAsLender    Loan[]             @relation("Lender")
+  installmentPlans InstallmentPlan[]
+  loanApplications LoanApplication[]
+  collectionCases  CollectionCase[]
+  customerCredit   CustomerCredit?
+
+  @@unique([workspaceId, userId])
+}
+
+enum ContactType {
+  BORROWER
+  LENDER
+  BOTH
+}
+
+// ==========================================
+// INTEREST POLICIES
+// ==========================================
+
+model InterestPolicy {
+  id          String       @id @default(cuid())
+  workspaceId String
+  name        String
+  mode        InterestMode
+  monthlyRate Float?       // e.g., 0.015 for 1.5%
+  dailyRate   Float?       // e.g., 0.0005 for 0.05%
+  anchorDay   Int?         // For monthly: day of month to calculate interest
+  graceDays   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  loans            Loan[]
+  loanApplications LoanApplication[]
+}
+
+enum InterestMode {
+  MONTHLY
+  DAILY
+}
+
+// ==========================================
+// LOANS
+// ==========================================
+
+model Loan {
+  id               String     @id @default(cuid())
+  workspaceId      String
+  borrowerId       String
+  lenderId         String
+  principal        Float
+  remainingPrincipal Float
+  accruedInterest  Float      @default(0)
+  startDate        DateTime
+  dueDate          DateTime?
+  status           LoanStatus @default(OPEN)
+  loanType         LoanType   @default(RECEIVABLE) // เจ้าหนี้หรือลูกหนี้
+  interestPolicyId String?
+  applicationId    String?    @unique // Link to loan application
+  note             String?
+  imageUrl         String?    // รูปหลักฐานสัญญา
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  borrower        Contact            @relation("Borrower", fields: [borrowerId], references: [id])
+  lender          Contact            @relation("Lender", fields: [lenderId], references: [id])
+  interestPolicy  InterestPolicy?    @relation(fields: [interestPolicyId], references: [id])
+  application     LoanApplication?   @relation("ApplicationToLoan", fields: [applicationId], references: [id])
+  allocations     PaymentAllocation[]
+  collectionCases CollectionCase[]
+}
+
+enum LoanStatus {
+  OPEN
+  CLOSED
+  OVERDUE
+}
+
+enum LoanType {
+  RECEIVABLE  // เราเป็นเจ้าหนี้ (ปล่อยกู้ให้คนอื่น) - ลูกหนี้ต้องจ่ายเรา
+  PAYABLE     // เราเป็นลูกหนี้ (กู้จากคนอื่น) - เราต้องจ่ายเจ้าหนี้
+}
+
+// ==========================================
+// PAYMENTS & ALLOCATIONS
+// ==========================================
+
+model Payment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  amount      Float
+  paymentDate DateTime
+  note        String?
+  attachmentUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  allocations PaymentAllocation[]
+}
+
+model PaymentAllocation {
+  id            String @id @default(cuid())
+  paymentId     String
+  loanId        String
+  principalPaid Float  @default(0)
+  interestPaid  Float  @default(0)
+  createdAt     DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  loan    Loan    @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// CREDIT CARDS
+// ==========================================
+
+model CreditCard {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  name              String
+  cardNumber        String?  // Last 4 digits only
+  creditLimit       Float
+  currentBalance    Float    @default(0)
+  statementCutDay   Int      // Day of month (1-31)
+  paymentDueDays    Int      // Days after cut day for payment
+  minPaymentPercent Float    @default(0.05) // 5% minimum
+  minPaymentFixed   Float?   // Fixed minimum if applicable
+  interestRate      Float    // Monthly interest rate
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace  Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  statements CreditCardStatement[]
+}
+
+model CreditCardStatement {
+  id             String   @id @default(cuid())
+  creditCardId   String
+  statementDate  DateTime
+  dueDate        DateTime
+  openingBalance Float
+  closingBalance Float
+  minimumPayment Float
+  totalPaid      Float    @default(0)
+  interestCharged Float   @default(0)
+  isPaid         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  creditCard  CreditCard                      @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  allocations CreditCardPaymentAllocation[]
+}
+
+model CreditCardPaymentAllocation {
+  id          String   @id @default(cuid())
+  statementId String
+  amount      Float
+  paymentDate DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+
+  statement CreditCardStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+
+model Notification {
+  id          String           @id @default(cuid())
+  workspaceId String
+  type        NotificationType
+  title       String
+  message     String
+  referenceId String?          // ID of related loan/payment/etc
+  referenceType String?        // Type: LOAN, PAYMENT, CREDIT_CARD, etc
+  isRead      Boolean          @default(false)
+  dueDate     DateTime?        // When should this trigger
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  PAYMENT_DUE       // การชำระครบกำหนด
+  INTEREST_ACCRUED  // ดอกเบี้ยสะสม
+  LOAN_OVERDUE      // สัญญาเลยกำหนด
+  CREDIT_CARD_DUE   // บัตรเครดิตครบกำหนด
+  INSTALLMENT_DUE   // งวดผ่อนครบกำหนด
+  COLLECTION_REMINDER // แจ้งเตือนทวงหนี้
+  CREDIT_LIMIT_WARNING // เตือนวงเงินใกล้เต็ม
+}
+
+// ==========================================
+// INSTALLMENT PLANS (ระบบผ่อนสินค้า)
+// ==========================================
+
+model InstallmentPlan {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  contactId        String
+  itemName         String            // ชื่อสินค้า/รายการ
+  itemDescription  String?
+  itemImageUrl     String?           // รูปสินค้า
+  totalAmount      Float             // ยอดรวมทั้งหมด
+  downPayment      Float             @default(0) // เงินดาวน์
+  numberOfTerms    Int               // จำนวนงวด
+  termAmount       Float             // ยอดต่องวด
+  interestRate     Float             @default(0) // อัตราดอกเบี้ย (0 = ผ่อน 0%)
+  startDate        DateTime
+  status           InstallmentStatus @default(ACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  workspace    Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact      Contact                @relation(fields: [contactId], references: [id])
+  installments Installment[]
+  documents    InstallmentDocument[]  // เอกสารแนบ
+}
+
+// เอกสารแนบสำหรับแผนผ่อน (บัตรประชาชน, สัญญา, ฯลฯ)
+model InstallmentDocument {
+  id                String   @id @default(cuid())
+  installmentPlanId String
+  name              String   // ชื่อเอกสาร
+  type              DocumentType @default(OTHER)
+  url               String   // URL ของไฟล์
+  createdAt         DateTime @default(now())
+
+  plan InstallmentPlan @relation(fields: [installmentPlanId], references: [id], onDelete: Cascade)
+}
+
+enum DocumentType {
+  ID_CARD           // บัตรประชาชน
+  HOUSE_REGISTRATION // ทะเบียนบ้าน
+  CONTRACT          // สัญญา
+  RECEIPT           // ใบเสร็จ
+  PRODUCT_IMAGE     // รูปสินค้า
+  OTHER             // อื่นๆ
+}
+
+model Installment {
+  id                String            @id @default(cuid())
+  installmentPlanId String
+  termNumber        Int               // งวดที่
+  dueDate           DateTime          // วันครบกำหนด
+  amount            Float             // ยอดที่ต้องจ่าย
+  principalAmount   Float             // ส่วนเงินต้น
+  interestAmount    Float             @default(0) // ส่วนดอกเบี้ย
+  paidAmount        Float             @default(0) // ยอดที่จ่ายแล้ว
+  paidDate          DateTime?         // วันที่จ่าย
+  slipImageUrl      String?           // รูปสลิปการชำระ
+  status            InstallmentTermStatus @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  plan InstallmentPlan @relation(fields: [installmentPlanId], references: [id], onDelete: Cascade)
+}
+
+enum InstallmentStatus {
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+  CANCELLED
+}
+
+enum InstallmentTermStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+}
+
+// ==========================================
+// LOAN APPLICATIONS (ระบบปล่อยกู้)
+// ==========================================
+
+model LoanApplication {
+  id               String                @id @default(cuid())
+  workspaceId      String
+  contactId        String
+  requestedAmount  Float                 // ยอดที่ขอกู้
+  approvedAmount   Float?                // ยอดที่อนุมัติ
+  purpose          String?               // วัตถุประสงค์
+  term             Int?                  // ระยะเวลา (เดือน)
+  interestPolicyId String?
+  status           LoanApplicationStatus @default(PENDING)
+  submittedAt      DateTime              @default(now())
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  approvalNote     String?
+  rejectionReason  String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact        Contact         @relation(fields: [contactId], references: [id])
+  interestPolicy InterestPolicy? @relation(fields: [interestPolicyId], references: [id])
+  documents      LoanDocument[]
+  createdLoan    Loan?           @relation("ApplicationToLoan")
+}
+
+model LoanDocument {
+  id                String   @id @default(cuid())
+  loanApplicationId String
+  name              String
+  fileUrl           String
+  fileType          String
+  uploadedAt        DateTime @default(now())
+
+  application LoanApplication @relation(fields: [loanApplicationId], references: [id], onDelete: Cascade)
+}
+
+enum LoanApplicationStatus {
+  PENDING     // รอพิจารณา
+  REVIEWING   // กำลังพิจารณา
+  APPROVED    // อนุมัติ
+  REJECTED    // ปฏิเสธ
+  CANCELLED   // ยกเลิก
+  DISBURSED   // เบิกจ่ายแล้ว
+}
+
+// ==========================================
+// DEBT COLLECTION (ระบบทวงหนี้)
+// ==========================================
+
+model CollectionCase {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  loanId         String
+  contactId      String
+  totalOutstanding Float          // ยอดค้างชำระทั้งหมด
+  principalDue   Float            // เงินต้นค้าง
+  interestDue    Float            // ดอกเบี้ยค้าง
+  daysPastDue    Int              // จำนวนวันที่ค้าง
+  status         CollectionStatus @default(ACTIVE)
+  priority       CollectionPriority @default(NORMAL)
+  assignedTo     String?          // ผู้รับผิดชอบ
+  lastContactDate DateTime?
+  nextFollowUpDate DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  loan      Loan               @relation(fields: [loanId], references: [id])
+  contact   Contact            @relation(fields: [contactId], references: [id])
+  activities CollectionActivity[]
+}
+
+model CollectionActivity {
+  id               String         @id @default(cuid())
+  collectionCaseId String
+  activityType     ActivityType
+  description      String
+  outcome          String?
+  promisedAmount   Float?
+  promisedDate     DateTime?
+  contactedAt      DateTime       @default(now())
+  createdBy        String?
+  createdAt        DateTime       @default(now())
+
+  collectionCase CollectionCase @relation(fields: [collectionCaseId], references: [id], onDelete: Cascade)
+}
+
+enum CollectionStatus {
+  ACTIVE      // กำลังติดตาม
+  PROMISED    // ลูกหนี้สัญญาจ่าย
+  PARTIAL     // จ่ายบางส่วน
+  RESOLVED    // เก็บหนี้ได้
+  WRITTEN_OFF // ตัดหนี้สูญ
+  LEGAL       // ดำเนินคดี
+}
+
+enum CollectionPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum ActivityType {
+  PHONE_CALL      // โทรติดตาม
+  SMS             // ส่ง SMS
+  EMAIL           // ส่งอีเมล
+  VISIT           // เข้าพบ
+  LETTER          // ส่งจดหมาย
+  PROMISE_TO_PAY  // รับสัญญาจ่าย
+  PAYMENT_RECEIVED // ได้รับชำระ
+  NOTE            // บันทึกอื่นๆ
+}
+
+// ==========================================
+// CREDIT LIMITS (วงเงินเครดิตลูกค้า)
+// ==========================================
+
+model CustomerCredit {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  contactId       String   @unique
+  creditLimit     Float    // วงเงินสูงสุด
+  usedCredit      Float    @default(0) // วงเงินที่ใช้ไป
+  availableCredit Float    // วงเงินคงเหลือ (computed)
+  creditScore     Int?     // คะแนนเครดิต (0-100)
+  riskLevel       RiskLevel @default(MEDIUM)
+  lastReviewDate  DateTime?
+  nextReviewDate  DateTime?
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact   @relation(fields: [contactId], references: [id])
+  history   CreditHistory[]
+}
+
+model CreditHistory {
+  id               String   @id @default(cuid())
+  customerCreditId String
+  changeType       CreditChangeType
+  previousLimit    Float
+  newLimit         Float
+  previousScore    Int?
+  newScore         Int?
+  reason           String
+  changedBy        String?
+  createdAt        DateTime @default(now())
+
+  customerCredit CustomerCredit @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CreditChangeType {
+  INCREASE      // เพิ่มวงเงิน
+  DECREASE      // ลดวงเงิน
+  SCORE_UPDATE  // อัพเดทคะแนน
+  REVIEW        // รีวิวประจำงวด
+}
+
+// ==========================================
+// PRODUCT CATALOG (แคตาล็อคสินค้า)
+// ==========================================
+
+model Product {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  imageUrl    String?
+  price       Float?           // ราคาเริ่มต้น
+  cost        Float?           // ต้นทุน
+  category    String?          // หมวดหมู่
+  sku         String?          // รหัสสินค้า
+  barcode     String?          // บาร์โค้ด
+  unit        String?          // หน่วย (ชิ้น, กล่อง, ฯลฯ)
+  stockQty    Int      @default(0)  // จำนวนในสต๊อก
+  minStock    Int      @default(0)  // สต๊อกขั้นต่ำ (แจ้งเตือน)
+  maxStock    Int?             // สต๊อกสูงสุด
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+
+  @@index([workspaceId])
+  @@index([sku])
+  @@index([barcode])
+}
+
+// ประวัติการเคลื่อนไหวสต๊อก
+model StockMovement {
+  id          String        @id @default(cuid())
+  productId   String
+  type        StockMoveType // IN = รับเข้า, OUT = จ่ายออก, ADJUST = ปรับยอด
+  quantity    Int           // จำนวน (+ หรือ -)
+  beforeQty   Int           // ยอดก่อนเคลื่อนไหว
+  afterQty    Int           // ยอดหลังเคลื่อนไหว
+  reference   String?       // อ้างอิง (เลขที่ใบรับ, เลขที่ขาย, ฯลฯ)
+  note        String?       // หมายเหตุ
+  cost        Float?        // ต้นทุนต่อหน่วย (สำหรับ IN)
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+enum StockMoveType {
+  IN          // รับเข้าสต๊อก
+  OUT         // จ่ายออกสต๊อก
+  ADJUST      // ปรับยอด
+  SALE        // ขาย
+  RETURN      // รับคืน
+  DAMAGE      // เสียหาย
+  TRANSFER    // โอนย้าย
+}
+
+// ==========================================
+// SAAS SUBSCRIPTION & BILLING
+// ==========================================
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   @unique // FREE, PRO, BUSINESS
+  displayName String   // แสดงชื่อ
+  description String?
+  price       Float    @default(0) // ราคาต่อเดือน (THB)
+  yearlyPrice Float?   // ราคาต่อปี (ส่วนลด)
+  currency    String   @default("THB")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  limits        PlanLimit[]
+  subscriptions Subscription[]
+}
+
+model PlanLimit {
+  id        String @id @default(cuid())
+  planId    String
+  feature   String // WORKSPACES, CONTACTS, LOANS, STORAGE_MB, etc.
+  limit     Int    // -1 = unlimited
+  createdAt DateTime @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, feature])
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String?  @unique // 1 user = 1 subscription (optional for workspace-level)
+  workspaceId String?  @unique // 1 workspace = 1 subscription
+  planId      String
+  status      SubscriptionStatus @default(PENDING)
+  billingCycle BillingCycle @default(MONTHLY)
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  cancelledAt DateTime?
+  trialEndsAt DateTime?
+  requestNote String?  // หมายเหตุจาก user ที่ขอสมัคร
+  approvedBy  String?  // Admin ที่อนุมัติ
+  approvedAt  DateTime?
+  rejectedReason String? // เหตุผลที่ปฏิเสธ
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan      Plan       @relation(fields: [planId], references: [id])
+  invoices  Invoice[]
+  usages    UsageRecord[]
+}
+
+enum SubscriptionStatus {
+  PENDING     // รอการอนุมัติ
+  ACTIVE      // ใช้งานอยู่
+  CANCELLED   // ยกเลิก
+  EXPIRED
+  PAST_DUE
+  TRIALING
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  amount         Float
+  currency       String   @default("THB")
+  status         InvoiceStatus @default(PENDING)
+  dueDate        DateTime
+  paidAt         DateTime?
+  invoiceNumber  String   @unique
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscription    Subscription     @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  paymentRequests PaymentRequest[]
+}
+
+// คำขอชำระเงินสำหรับ Subscription
+model PaymentRequest {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  amount         Float
+  currency       String   @default("THB")
+  status         PaymentRequestStatus @default(PENDING)
+  
+  // ข้อมูล QR Code
+  qrCodeData     String?  // PromptPay QR data
+  promptPayId    String?  // หมายเลข PromptPay ที่รับเงิน
+  
+  // ข้อมูลการชำระ
+  slipImage      String?  // URL รูปสลิป
+  transRef       String?  @unique // Transaction reference จาก SlipOK
+  verifiedAt     DateTime?
+  verifiedBy     String?  // "SLIPOK" หรือ Admin ID ที่อนุมัติ manual
+  
+  // ข้อมูลจาก SlipOK
+  slipData       Json?    // ข้อมูลดิบจาก SlipOK response
+  senderName     String?  // ชื่อผู้โอน
+  senderBank     String?  // ธนาคารผู้โอน
+  receiverName   String?  // ชื่อผู้รับ
+  receiverBank   String?  // ธนาคารผู้รับ
+  slipAmount     Float?   // ยอดเงินในสลิป
+  transDate      String?  // วันที่โอน
+  transTime      String?  // เวลาโอน
+  
+  // หมายเหตุ
+  note           String?
+  rejectedReason String?
+  
+  expiresAt      DateTime // QR หมดอายุ
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentRequestStatus {
+  PENDING     // รอชำระ
+  UPLOADED    // อัปโหลดสลิปแล้ว รอตรวจสอบ
+  VERIFYING   // กำลังตรวจสอบ
+  VERIFIED    // ตรวจสอบผ่าน
+  REJECTED    // ถูกปฏิเสธ (สลิปไม่ถูกต้อง)
+  EXPIRED     // หมดอายุ
+  CANCELLED   // ยกเลิก
+}
+
+// ตั้งค่า SlipOK สำหรับ Admin
+model SlipOKConfig {
+  id             String   @id @default(cuid())
+  branchId       String   @unique // SlipOK Branch ID
+  apiKey         String   // SlipOK API Key (encrypted)
+  promptPayId    String   // หมายเลข PromptPay รับเงิน
+  promptPayName  String   // ชื่อบัญชี PromptPay
+  bankCode       String?  // รหัสธนาคาร
+  bankName       String?  // ชื่อธนาคาร
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model UsageRecord {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  feature        String   // WORKSPACES, CONTACTS, LOANS, etc.
+  count          Int      @default(0)
+  period         DateTime // เดือน/ปี ที่นับ (e.g., 2026-02-01)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, feature, period])
+  @@index([subscriptionId, period])
+}
