@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
+import { CreateButton } from "@/components/ui/create-button";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +55,12 @@ export default async function CreditCardsPage({ params }: Props) {
               </Link>
               <h1 className="text-2xl font-bold">บัตรเครดิต</h1>
             </div>
-            <Link href={`/workspaces/${params.workspaceId}/credit-cards/new`}>
-              <Button>+ เพิ่มบัตร</Button>
-            </Link>
+            <CreateButton
+              feature="CREDIT_CARDS"
+              href={`/workspaces/${params.workspaceId}/credit-cards/new`}
+            >
+              เพิ่มบัตร
+            </CreateButton>
           </div>
         </div>
       </header>
@@ -66,9 +70,12 @@ export default async function CreditCardsPage({ params }: Props) {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">ยังไม่มีบัตรเครดิต</p>
-              <Link href={`/workspaces/${params.workspaceId}/credit-cards/new`}>
-                <Button>เพิ่มบัตรใบแรก</Button>
-              </Link>
+              <CreateButton
+                feature="CREDIT_CARDS"
+                href={`/workspaces/${params.workspaceId}/credit-cards/new`}
+              >
+                เพิ่มบัตรใบแรก
+              </CreateButton>
             </CardContent>
           </Card>
         ) : (

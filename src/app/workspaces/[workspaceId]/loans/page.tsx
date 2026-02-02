@@ -2,8 +2,8 @@ import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, FileText } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
+import { CreateButton } from "@/components/ui/create-button";
 import { calculateAccruedInterest, LoanWithPolicy } from "@/services/interest.service";
 import LoansClient from "./LoansClient";
 
@@ -124,12 +124,13 @@ export default async function LoansPage({ params }: Props) {
                 <h1 className="text-lg font-semibold">สัญญาเงินกู้</h1>
               </div>
             </div>
-            <Link href={`/workspaces/${params.workspaceId}/loans/new`}>
-              <Button className="rounded-full gap-2">
-                <Plus className="h-4 w-4" />
-                สร้างสัญญา
-              </Button>
-            </Link>
+            <CreateButton
+              feature="LOANS"
+              href={`/workspaces/${params.workspaceId}/loans/new`}
+              className="rounded-full gap-2"
+            >
+              สร้างสัญญา
+            </CreateButton>
           </div>
         </div>
       </header>

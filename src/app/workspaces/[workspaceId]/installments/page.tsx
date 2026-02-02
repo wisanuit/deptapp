@@ -2,8 +2,8 @@ import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Package } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
+import { CreateButton } from "@/components/ui/create-button";
 import InstallmentsClient from "./InstallmentsClient";
 
 export const dynamic = "force-dynamic";
@@ -120,12 +120,13 @@ export default async function InstallmentsPage({ params }: Props) {
                 <h1 className="text-lg font-semibold">ระบบผ่อนสินค้า</h1>
               </div>
             </div>
-            <Link href={`/workspaces/${params.workspaceId}/installments/new`}>
-              <Button className="rounded-full gap-2">
-                <Plus className="h-4 w-4" />
-                สร้างแผนผ่อน
-              </Button>
-            </Link>
+            <CreateButton
+              feature="INSTALLMENT_PLANS"
+              href={`/workspaces/${params.workspaceId}/installments/new`}
+              className="rounded-full gap-2"
+            >
+              สร้างแผนผ่อน
+            </CreateButton>
           </div>
         </div>
       </header>

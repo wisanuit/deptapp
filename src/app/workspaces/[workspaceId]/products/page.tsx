@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { FeatureLockModal, type UsageData } from "@/components/ui/feature-lock";
 import {
   ArrowLeft,
   Package,
@@ -59,6 +60,8 @@ export default function ProductsPage() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -120,6 +123,25 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // ตรวจสอบ limit ก่อนเปิด modal เพิ่มสินค้า
+  const checkLimitAndOpenModal = async () => {
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/check-limit?feature=PRODUCTS`);
+      const data = await res.json();
+      
+      if (!data.allowed) {
+        setUsageData(data);
+        setShowLockModal(true);
+      } else {
+        setShowAddProduct(true);
+      }
+    } catch (error) {
+      // ถ้าเช็คไม่ได้ ให้เปิด modal ได้เลย
+      console.error("Error checking limit:", error);
+      setShowAddProduct(true);
+    }
+  };
 
   const handleAddProduct = async () => {
     if (!productForm.name) {
@@ -299,7 +321,7 @@ export default function ProductsPage() {
             </div>
 
             <Button
-              onClick={() => setShowAddProduct(true)}
+              onClick={checkLimitAndOpenModal}
               className="rounded-full bg-orange-600 hover:bg-orange-700 gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -1055,6 +1077,15 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      {/* Feature Lock Modal */}
+      <FeatureLockModal
+        isOpen={showLockModal}
+        onClose={() => setShowLockModal(false)}
+        feature="PRODUCTS"
+        currentUsage={usageData?.currentUsage}
+        limit={usageData?.limit}
+      />
     </div>
   );
 }

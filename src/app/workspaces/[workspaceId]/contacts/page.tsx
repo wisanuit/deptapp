@@ -9,6 +9,7 @@ import {
   ArrowLeft, Plus, Users, ChevronRight, 
   Phone, Mail, FileText, TrendingUp
 } from "lucide-react";
+import { CreateButton } from "@/components/ui/create-button";
 
 export const dynamic = "force-dynamic";
 
@@ -100,12 +101,13 @@ export default async function ContactsPage({ params }: Props) {
                 <h1 className="text-lg font-semibold">ผู้ติดต่อ</h1>
               </div>
             </div>
-            <Link href={`/workspaces/${params.workspaceId}/contacts/new`}>
-              <Button className="rounded-full gap-2">
-                <Plus className="h-4 w-4" />
-                เพิ่มผู้ติดต่อ
-              </Button>
-            </Link>
+            <CreateButton
+              feature="CONTACTS"
+              href={`/workspaces/${params.workspaceId}/contacts/new`}
+              className="rounded-full gap-2"
+            >
+              เพิ่มผู้ติดต่อ
+            </CreateButton>
           </div>
         </div>
       </header>
