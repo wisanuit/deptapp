@@ -635,41 +635,7 @@ export default async function WorkspacePage({ params }: Props) {
               </CardContent>
             </Card>
 
-            {/* Module Stats */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  สรุปโมดูล
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <Link href={`/workspaces/${workspace.id}/installments`}
-                    className="flex flex-col items-center p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
-                    <ShoppingBag className="h-6 w-6 text-purple-600 mb-1" />
-                    <span className="text-2xl font-bold">{workspace._count.installmentPlans}</span>
-                    <span className="text-xs text-muted-foreground">การผ่อน</span>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/customer-credits`}
-                    className="flex flex-col items-center p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
-                    <Landmark className="h-6 w-6 text-blue-600 mb-1" />
-                    <span className="text-2xl font-bold">{workspace._count.customerCredits}</span>
-                    <span className="text-xs text-muted-foreground">สินเชื่อ</span>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/loan-applications`}
-                    className="flex flex-col items-center p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
-                    <FileCheck className="h-6 w-6 text-green-600 mb-1" />
-                    <span className="text-2xl font-bold">{workspace._count.loanApplications}</span>
-                    <span className="text-xs text-muted-foreground">คำขอกู้</span>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/collections`}
-                    className="flex flex-col items-center p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
-                    <AlertTriangle className="h-6 w-6 text-red-600 mb-1" />
-                    <span className="text-2xl font-bold">{workspace._count.collectionCases}</span>
-                    <span className="text-xs text-muted-foreground">ทวงหนี้</span>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* Overdue Alert */}
             {overdueLoans.length > 0 && (
@@ -709,44 +675,6 @@ export default async function WorkspacePage({ params }: Props) {
               </Card>
             )}
 
-            {/* Quick Actions */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-4">การดำเนินการ</h3>
-                <div className="space-y-2">
-                  <Link href={`/workspaces/${workspace.id}/loans/new`} className="block">
-                    <Button className="w-full rounded-lg gap-2 justify-start" variant="default">
-                      <FileText className="h-4 w-4" />
-                      สร้างสัญญาใหม่
-                    </Button>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/payments/new`} className="block">
-                    <Button variant="outline" className="w-full rounded-lg gap-2 justify-start">
-                      <Wallet className="h-4 w-4" />
-                      บันทึกการชำระ
-                    </Button>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/installments/new`} className="block">
-                    <Button variant="outline" className="w-full rounded-lg gap-2 justify-start">
-                      <ShoppingBag className="h-4 w-4" />
-                      สร้างการผ่อนชำระ
-                    </Button>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/customer-credits/new`} className="block">
-                    <Button variant="outline" className="w-full rounded-lg gap-2 justify-start">
-                      <Landmark className="h-4 w-4" />
-                      สร้างสินเชื่อ
-                    </Button>
-                  </Link>
-                  <Link href={`/workspaces/${workspace.id}/contacts/new`} className="block">
-                    <Button variant="outline" className="w-full rounded-lg gap-2 justify-start">
-                      <Users className="h-4 w-4" />
-                      เพิ่มผู้ติดต่อ
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
