@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateContactSchema } from "@/lib/validations";
 
 interface Params {
-  params: { workspaceId: string; contactId: string };
+  params: Promise<{ workspaceId: string; contactId: string }>;
 }
 
 async function checkWorkspaceAccess(workspaceId: string, userId: string) {
@@ -21,15 +21,17 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const member = await checkWorkspaceAccess(params.workspaceId, session.user.id);
+    const { workspaceId, contactId } = await params;
+
+    const member = await checkWorkspaceAccess(workspaceId, session.user.id);
     if (!member) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const contact = await prisma.contact.findFirst({
       where: {
-        id: params.contactId,
-        workspaceId: params.workspaceId,
+        id: contactId,
+        workspaceId: workspaceId,
       },
       include: {
         loansAsBorrower: {
@@ -60,7 +62,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const member = await checkWorkspaceAccess(params.workspaceId, session.user.id);
+    const { workspaceId, contactId } = await params;
+
+    const member = await checkWorkspaceAccess(workspaceId, session.user.id);
     if (!member) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -86,8 +90,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const contact = await prisma.contact.updateMany({
       where: {
-        id: params.contactId,
-        workspaceId: params.workspaceId,
+        id: contactId,
+        workspaceId: workspaceId,
       },
       data,
     });
@@ -97,7 +101,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     const updatedContact = await prisma.contact.findUnique({
-      where: { id: params.contactId },
+      where: { id: contactId },
     });
 
     return NextResponse.json(updatedContact);
@@ -115,7 +119,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const member = await checkWorkspaceAccess(params.workspaceId, session.user.id);
+    const { workspaceId, contactId } = await params;
+
+    const member = await checkWorkspaceAccess(workspaceId, session.user.id);
     if (!member) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -123,8 +129,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     // Check if user is trying to delete their own contact
     const contact = await prisma.contact.findFirst({
       where: {
-        id: params.contactId,
-        workspaceId: params.workspaceId,
+        id: contactId,
+        workspaceId: workspaceId,
       },
     });
 
@@ -137,8 +143,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const result = await prisma.contact.deleteMany({
       where: {
-        id: params.contactId,
-        workspaceId: params.workspaceId,
+        id: contactId,
+        workspaceId: workspaceId,
       },
     });
 
