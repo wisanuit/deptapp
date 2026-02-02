@@ -52,8 +52,19 @@ export const PLAN_PRICING = {
   BUSINESS: { monthly: 899, yearly: 8990 },
 };
 
-// ดึงแผนทั้งหมดจากฐานข้อมูล (สำหรับหน้า pricing)
+// In-memory cache for plans (refreshed every 5 minutes)
+let plansCache: any[] | null = null;
+let plansCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// ดึงแผนทั้งหมดจากฐานข้อมูล (สำหรับหน้า pricing) - with caching
 export async function getAllPlans() {
+  // Check cache first
+  const now = Date.now();
+  if (plansCache && (now - plansCacheTime) < CACHE_TTL) {
+    return plansCache;
+  }
+
   const plans = await prisma.plan.findMany({
     where: { isActive: true },
     include: { limits: true },
@@ -100,7 +111,14 @@ export async function getAllPlans() {
         })),
       },
     ];
+    // Cache default plans too
+    plansCache = plans.length === 0 ? plansCache : plans;
+    plansCacheTime = now;
   }
+
+  // Update cache
+  plansCache = plans;
+  plansCacheTime = now;
 
   return plans;
 }

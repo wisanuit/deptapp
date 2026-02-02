@@ -31,7 +31,8 @@ import {
 import { HomeClientWrapper, HeroButtons, HeaderButtons, PricingButton } from "@/components/home-client-wrapper";
 import { getAllPlans } from "@/services/subscription.service";
 
-export const dynamic = "force-dynamic";
+// Revalidate every 1 hour for pricing data
+export const revalidate = 3600;
 
 export default async function HomePage() {
   const session = await getAuthSession();

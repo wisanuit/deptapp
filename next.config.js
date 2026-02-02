@@ -5,6 +5,10 @@ const nextConfig = {
       allowedOrigins: ["localhost:3000"],
     },
   },
+  // Performance optimizations
+  poweredByHeader: false,
+  compress: true,
+  // Optimize images
   images: {
     remotePatterns: [
       {
@@ -24,6 +28,16 @@ const nextConfig = {
         hostname: "*.blob.vercel-storage.com",
       },
     ],
+    // Use webp format for better compression
+    formats: ['image/webp'],
+    // Minimize image size
+    minimumCacheTTL: 60,
+  },
+  // Reduce bundle size
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+    },
   },
 };
 
