@@ -21,6 +21,7 @@ import {
   CreditCard, Receipt, AlertCircle, Crown
 } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
+import { CreateButton } from "@/components/ui/create-button";
 
 export const dynamic = "force-dynamic";
 
@@ -248,12 +249,14 @@ export default async function DashboardPage() {
               <CardContent className="p-5">
                 <h3 className="font-semibold mb-4">การดำเนินการ</h3>
                 <div className="space-y-2">
-                  <Link href="/workspaces/new" className="block">
-                    <Button className="w-full rounded-lg gap-2">
-                      <Plus className="h-4 w-4" />
-                      สร้าง Workspace ใหม่
-                    </Button>
-                  </Link>
+                  <CreateButton
+                    href="/workspaces/new"
+                    feature="WORKSPACES"
+                    className="w-full rounded-lg gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    สร้าง Workspace ใหม่
+                  </CreateButton>
                 </div>
               </CardContent>
             </Card>
@@ -266,12 +269,14 @@ export default async function DashboardPage() {
                 <Building2 className="h-5 w-5 text-primary" />
                 <h2 className="section-title">Workspaces ของคุณ</h2>
               </div>
-              <Link href="/workspaces/new">
-                <Button className="rounded-full gap-2">
-                  <Plus className="h-4 w-4" />
-                  สร้าง Workspace
-                </Button>
-              </Link>
+              <CreateButton
+                href="/workspaces/new"
+                feature="WORKSPACES"
+                className="rounded-full gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                สร้าง Workspace
+              </CreateButton>
             </div>
 
             {workspaces.length === 0 ? (
@@ -281,12 +286,14 @@ export default async function DashboardPage() {
                   <p className="text-lg text-muted-foreground mb-4">
                     คุณยังไม่มี Workspace กรุณาสร้าง Workspace แรกของคุณ
                   </p>
-                  <Link href="/workspaces/new">
-                    <Button className="rounded-full gap-2">
-                      <Plus className="h-4 w-4" />
-                      สร้าง Workspace
-                    </Button>
-                  </Link>
+                  <CreateButton
+                    href="/workspaces/new"
+                    feature="WORKSPACES"
+                    className="rounded-full gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    สร้าง Workspace
+                  </CreateButton>
                 </CardContent>
               </Card>
             ) : (
