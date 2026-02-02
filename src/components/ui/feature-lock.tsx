@@ -127,6 +127,15 @@ interface FeatureLockModalProps {
   limit?: number;
 }
 
+interface PlanData {
+  id: string;
+  name: string;
+  displayName: string;
+  price: number;
+  yearlyPrice: number | null;
+  limits: Record<string, number>;
+}
+
 export function FeatureLockModal({
   isOpen,
   onClose,
@@ -134,9 +143,27 @@ export function FeatureLockModal({
   currentUsage = 0,
   limit = 0,
 }: FeatureLockModalProps) {
+  const [plans, setPlans] = useState<PlanData[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // ดึงข้อมูลแผนจาก API
+      const fetchPlans = async () => {
+        try {
+          const res = await fetch("/api/subscription");
+          if (res.ok) {
+            const data = await res.json();
+            setPlans(data.plans || []);
+          }
+        } catch (error) {
+          console.error("Error fetching plans:", error);
+        } finally {
+          setLoadingPlans(false);
+        }
+      };
+      fetchPlans();
     } else {
       document.body.style.overflow = "unset";
     }
@@ -144,6 +171,16 @@ export function FeatureLockModal({
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const proPlan = plans.find(p => p.name === "PRO");
+  const businessPlan = plans.find(p => p.name === "BUSINESS");
+
+  // Format price with Thai Baht
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("th-TH").format(price);
+  };
 
   if (!isOpen) return null;
 
@@ -195,10 +232,16 @@ export function FeatureLockModal({
             <div className="border border-blue-200 dark:border-blue-800 rounded-xl p-4 bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-slate-900">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="h-5 w-5 text-blue-500" />
-                <span className="font-bold text-blue-600 dark:text-blue-400">PRO</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">
+                  {proPlan?.displayName || "PRO"}
+                </span>
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                ฿299<span className="text-sm font-normal text-slate-500">/เดือน</span>
+                {loadingPlans ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                ) : (
+                  <>฿{formatPrice(proPlan?.price || 299)}<span className="text-sm font-normal text-slate-500">/เดือน</span></>
+                )}
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                 {PLAN_BENEFITS.PRO.slice(0, 4).map((benefit, i) => (
@@ -219,10 +262,16 @@ export function FeatureLockModal({
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <Crown className="h-5 w-5 text-amber-500" />
-                <span className="font-bold text-amber-600 dark:text-amber-400">BUSINESS</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {businessPlan?.displayName || "BUSINESS"}
+                </span>
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                ฿899<span className="text-sm font-normal text-slate-500">/เดือน</span>
+                {loadingPlans ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                ) : (
+                  <>฿{formatPrice(businessPlan?.price || 899)}<span className="text-sm font-normal text-slate-500">/เดือน</span></>
+                )}
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                 {PLAN_BENEFITS.BUSINESS.slice(0, 4).map((benefit, i) => (
