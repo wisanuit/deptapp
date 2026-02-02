@@ -379,3 +379,56 @@ export const FEATURE_NAMES: Record<FeatureType, string> = {
   STORAGE_MB: "พื้นที่จัดเก็บ (MB)",
   TEAM_MEMBERS: "สมาชิกทีม",
 };
+
+// ดึง plans ทั้งหมดจากฐานข้อมูล พร้อม limits
+export async function getAllPlans() {
+  return await prisma.plan.findMany({
+    where: { isActive: true },
+    include: {
+      limits: true,
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+// ดึง upgrade options จากฐานข้อมูล
+export async function getUpgradeOptionsFromDB(
+  currentPlanName: string,
+  feature: FeatureType
+) {
+  // ดึง plans ที่สูงกว่า current plan
+  const allPlans = await prisma.plan.findMany({
+    where: { 
+      isActive: true,
+      name: { not: currentPlanName }, // ไม่รวม plan ปัจจุบัน
+      NOT: { name: "FREE" }, // ไม่รวม FREE
+    },
+    include: {
+      limits: true,
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return allPlans.map((plan) => {
+    const featureLimit = plan.limits.find((l) => l.feature === feature);
+    return {
+      name: plan.name,
+      displayName: plan.displayName,
+      price: plan.price,
+      yearlyPrice: plan.yearlyPrice,
+      limit: featureLimit?.limit ?? 0,
+      benefits: plan.limits.map((l) => {
+        const featureName = FEATURE_NAMES[l.feature as FeatureType] || l.feature;
+        return l.limit === -1 
+          ? `${featureName} ไม่จำกัด`
+          : `${featureName} ${l.limit} รายการ`;
+      }),
+    };
+  });
+}
+
+// ดึง plan ปัจจุบันของ user
+export async function getCurrentPlan(userId: string) {
+  const subscription = await getUserSubscription(userId);
+  return subscription.plan;
+}
