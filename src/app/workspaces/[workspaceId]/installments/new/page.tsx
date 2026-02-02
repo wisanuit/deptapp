@@ -156,6 +156,7 @@ export default function NewInstallmentPage() {
         } catch (error) {
             console.error('Failed to fetch data:', error)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [workspaceId])
 
     useEffect(() => {
