@@ -2,6 +2,68 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUseFeature } from "@/services/subscription.service";
+import nodemailer from "nodemailer";
+
+// ฟังก์ชันส่งอีเมลเชิญสมาชิก
+async function sendInviteEmail(
+  toEmail: string,
+  inviterName: string,
+  workspaceName: string,
+  role: string
+) {
+  const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const roleText = role === "ADMIN" ? "ผู้ดูแล" : "สมาชิก";
+
+  const subject = `คุณได้รับเชิญเป็น${roleText}ของ ${workspaceName}`;
+  const emailBody = `
+สวัสดี,
+
+คุณได้รับเชิญจาก ${inviterName} ให้เข้าร่วม Workspace "${workspaceName}" ในฐานะ${roleText}
+
+คุณสามารถเข้าใช้งานได้ที่:
+${appUrl}/dashboard
+
+ขอบคุณ,
+ทีมงานระบบจัดการหนี้
+  `.trim();
+
+  // ใช้ SMTP (Gmail App Password)
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: toEmail,
+        subject: subject,
+        text: emailBody,
+        html: emailBody.replace(/\n/g, "<br>"),
+      });
+
+      console.log("Invite email sent to:", toEmail);
+      return true;
+    } catch (error) {
+      console.error("Failed to send invite email:", error);
+      return false;
+    }
+  }
+
+  // โหมดทดสอบ
+  console.log("===== INVITE EMAIL (DEMO MODE) =====");
+  console.log("To:", toEmail);
+  console.log("Subject:", subject);
+  console.log("Body:", emailBody);
+  console.log("=====================================");
+  return false;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +214,20 @@ export async function POST(request: NextRequest, { params }: Params) {
       },
     });
 
-    return NextResponse.json(newMember, { status: 201 });
+    // ส่งอีเมลแจ้งเตือน
+    const inviter = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { name: true, email: true },
+    });
+
+    const emailSent = await sendInviteEmail(
+      userToInvite.email,
+      inviter?.name || inviter?.email || "เจ้าของ Workspace",
+      workspace.name,
+      newMember.role
+    );
+
+    return NextResponse.json({ ...newMember, emailSent }, { status: 201 });
   } catch (error) {
     console.error("Error adding member:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

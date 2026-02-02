@@ -24,13 +24,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // ตรวจสอบว่าผู้ใช้เป็น OWNER
+    // ตรวจสอบว่าผู้ใช้เป็น OWNER หรือ ADMIN
     const membership = await prisma.workspaceMember.findFirst({
       where: { workspaceId, userId: session.user.id },
     });
 
-    if (!membership || membership.role !== "OWNER") {
-      return NextResponse.json({ error: "เฉพาะเจ้าของเท่านั้นที่เปลี่ยน role ได้" }, { status: 403 });
+    if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
+      return NextResponse.json({ error: "ไม่มีสิทธิ์เปลี่ยน role" }, { status: 403 });
     }
 
     // หา member ที่จะเปลี่ยน role
@@ -45,6 +45,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     // ไม่สามารถเปลี่ยน role ของ OWNER
     if (targetMember.role === "OWNER") {
       return NextResponse.json({ error: "ไม่สามารถเปลี่ยน role ของเจ้าของได้" }, { status: 400 });
+    }
+
+    // ADMIN สามารถเปลี่ยนได้เฉพาะ MEMBER
+    if (membership.role === "ADMIN" && targetMember.role === "ADMIN") {
+      return NextResponse.json({ error: "Admin ไม่สามารถเปลี่ยน role ของ Admin อื่นได้" }, { status: 403 });
     }
 
     const updatedMember = await prisma.workspaceMember.update({

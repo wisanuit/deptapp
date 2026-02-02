@@ -145,7 +145,10 @@ export default function WorkspaceSettingsPage() {
       const data = await res.json();
       
       if (res.ok) {
-        toast.success("เพิ่มสมาชิกสำเร็จ");
+        const emailStatus = data.emailSent 
+          ? " และส่งอีเมลแจ้งเตือนแล้ว" 
+          : " (ไม่ได้ส่งอีเมล - ตั้งค่า SMTP เพื่อส่งอีเมล)";
+        toast.success(`เพิ่มสมาชิกสำเร็จ${emailStatus}`);
         setShowInvite(false);
         setInviteEmail("");
         setInviteRole("MEMBER");
@@ -335,9 +338,12 @@ export default function WorkspaceSettingsPage() {
             <div className="space-y-3">
               {members.map((member) => {
                 const isOwner = member.role === "OWNER";
+                const isAdmin = member.role === "ADMIN";
                 const isCurrentUser = member.userId === currentUserId;
                 const currentMemberRole = members.find(m => m.userId === currentUserId)?.role;
-                const canEdit = currentMemberRole === "OWNER" && !isOwner;
+                // OWNER สามารถแก้ไขทุกคน (ยกเว้นตัวเอง), ADMIN แก้ไขได้เฉพาะ MEMBER
+                const canEdit = (currentMemberRole === "OWNER" && !isOwner) || 
+                               (currentMemberRole === "ADMIN" && !isOwner && !isAdmin);
                 const canRemove = (currentMemberRole === "OWNER" || currentMemberRole === "ADMIN") && !isOwner && !isCurrentUser;
                 
                 return (
