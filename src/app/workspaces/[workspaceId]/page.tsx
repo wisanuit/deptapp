@@ -79,7 +79,14 @@ export default async function WorkspacePage({ params }: Props) {
       installmentPlans: {
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: { contact: true }
+        include: { 
+          contact: true,
+          _count: {
+            select: {
+              installments: { where: { status: "PAID" } }
+            }
+          }
+        }
       },
       loanApplications: {
         where: { status: "PENDING" },
@@ -367,8 +374,8 @@ export default async function WorkspacePage({ params }: Props) {
                 ) : (
                   <div className="divide-y divide-border">
                     {workspace.installmentPlans.map((plan: typeof workspace.installmentPlans[0]) => {
-                      const paidTerms = 0; // จะต้อง query เพิ่มเพื่อนับงวดที่จ่ายแล้ว
-                      const progress = (paidTerms / plan.numberOfTerms) * 100;
+                      const paidTerms = (plan as any)._count?.installments || 0;
+                      const progress = plan.numberOfTerms > 0 ? (paidTerms / plan.numberOfTerms) * 100 : 0;
                       const isActive = plan.status === "ACTIVE";
 
                       return (
