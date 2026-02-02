@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { put } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
 
-// POST - อัปโหลดไฟล์
+// POST - อัปโหลดไฟล์ไปยัง Vercel Blob
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -48,27 +46,20 @@ export async function POST(request: NextRequest) {
     }
 
     // สร้างชื่อไฟล์ unique
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
     const timestamp = Date.now();
     const extension = file.name.split(".").pop();
-    const filename = `${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`;
+    const filename = `${folder}/${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`;
 
-    // สร้าง folder ถ้ายังไม่มี
-    const uploadDir = join(process.cwd(), "public", "uploads", folder);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // อัปโหลดไปยัง Vercel Blob
+    const blob = await put(filename, file, {
+      access: "public",
+      addRandomSuffix: false,
+    });
 
-    // บันทึกไฟล์
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // คืน URL ของไฟล์
-    const url = `/uploads/${folder}/${filename}`;
-
-    return NextResponse.json({ url, filename }, { status: 201 });
+    return NextResponse.json({ 
+      url: blob.url, 
+      filename: blob.pathname 
+    }, { status: 201 });
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
